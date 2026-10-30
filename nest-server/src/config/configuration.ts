@@ -1,0 +1,51 @@
+import type { AppConfig } from '../common/types/index.js';
+import { APP_CONSTANTS } from '../common/constants/app.constants.js';
+
+export default (): AppConfig => {
+  const nodeEnv = (process.env.NODE_ENV as AppConfig['nodeEnv']) ?? 'development';
+  const isProduction = nodeEnv === 'production';
+
+  // In production, swagger is disabled by default unless explicitly set to 'true'.
+  // In development and testing, swagger is enabled by default unless explicitly set to 'false'.
+  const swaggerEnabled = isProduction
+    ? process.env.SWAGGER_ENABLED === 'true'
+    : process.env.SWAGGER_ENABLED !== 'false';
+
+  const rawOrigins = process.env.CORS_ORIGINS ?? 'http://localhost:3000';
+  const parsedOrigins = rawOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return {
+    nodeEnv,
+    port: parseInt(process.env.PORT ?? String(APP_CONSTANTS.DEFAULT_PORT), 10),
+    api: {
+      prefix: process.env.API_PREFIX ?? APP_CONSTANTS.DEFAULT_API_PREFIX,
+      version: process.env.API_VERSION ?? APP_CONSTANTS.DEFAULT_API_VERSION,
+    },
+    database: {
+      url: process.env.DATABASE_URL,
+      host: process.env.DATABASE_HOST ?? 'localhost',
+      port: parseInt(process.env.DATABASE_PORT ?? '5432', 10),
+      user: process.env.DATABASE_USER ?? 'postgres',
+      password: process.env.DATABASE_PASSWORD ?? 'postgres',
+      name: process.env.DATABASE_NAME ?? 'passkey_auth',
+      ssl: process.env.DATABASE_SSL === 'true',
+    },
+    cors: {
+      origins: parsedOrigins.length > 0 ? parsedOrigins : ['http://localhost:3000'],
+    },
+    logging: {
+      level: process.env.LOG_LEVEL ?? 'info',
+    },
+    swagger: {
+      enabled: swaggerEnabled,
+    },
+    throttler: {
+      ttl: parseInt(process.env.THROTTLE_TTL ?? String(APP_CONSTANTS.DEFAULT_THROTTLE_TTL), 10),
+      limit: parseInt(process.env.THROTTLE_LIMIT ?? String(APP_CONSTANTS.DEFAULT_THROTTLE_LIMIT), 10),
+    },
+  };
+};
+
