@@ -36,5 +36,17 @@ export const environmentValidationSchema = Joi.object({
   THROTTLE_TTL: Joi.number().positive().default(60000),
 
   THROTTLE_LIMIT: Joi.number().positive().default(100),
-});
 
+  // WebAuthn / FIDO2 Relying Party Configuration
+  RP_NAME: Joi.string().trim().default('Passkey Authentication System'),
+
+  RP_ID: Joi.string().trim().default('localhost'),
+
+  RP_ORIGIN: Joi.string().default('http://localhost:3000'),
+
+  CHALLENGE_TTL_MS: Joi.number().positive().default(60000),
+
+  USER_VERIFICATION: Joi.string()
+    .valid('preferred', 'required', 'discouraged')
+    .default('preferred'),
+});
