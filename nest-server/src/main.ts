@@ -86,6 +86,7 @@ async function bootstrap() {
         },
         'bearer',
       )
+      .addTag('Passkey Authentication', 'WebAuthn passkey registration and authentication ceremonies')
       .addTag('Health', 'System liveness and dependency readiness probes')
       .addTag('Root', 'Core service information and root endpoints')
       .build();
