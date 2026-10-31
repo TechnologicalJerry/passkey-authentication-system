@@ -17,6 +17,12 @@ export default (): AppConfig => {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const rawRpOrigins = process.env.RP_ORIGIN ?? process.env.CORS_ORIGINS ?? 'http://localhost:3000';
+  const parsedRpOrigins = rawRpOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   return {
     nodeEnv,
     port: parseInt(process.env.PORT ?? String(APP_CONSTANTS.DEFAULT_PORT), 10),
@@ -46,6 +52,16 @@ export default (): AppConfig => {
       ttl: parseInt(process.env.THROTTLE_TTL ?? String(APP_CONSTANTS.DEFAULT_THROTTLE_TTL), 10),
       limit: parseInt(process.env.THROTTLE_LIMIT ?? String(APP_CONSTANTS.DEFAULT_THROTTLE_LIMIT), 10),
     },
+    webauthn: {
+      rpName: process.env.RP_NAME ?? APP_CONSTANTS.DEFAULT_RP_NAME,
+      rpId: process.env.RP_ID ?? APP_CONSTANTS.DEFAULT_RP_ID,
+      origins: parsedRpOrigins.length > 0 ? parsedRpOrigins : ['http://localhost:3000'],
+      challengeTtlMs: parseInt(
+        process.env.CHALLENGE_TTL_MS ?? String(APP_CONSTANTS.DEFAULT_CHALLENGE_TTL_MS),
+        10,
+      ),
+      userVerification: (process.env.USER_VERIFICATION as AppConfig['webauthn']['userVerification']) ??
+        APP_CONSTANTS.DEFAULT_USER_VERIFICATION,
+    },
   };
 };
-
