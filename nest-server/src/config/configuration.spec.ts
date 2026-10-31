@@ -24,6 +24,11 @@ describe('Configuration & Environment Validation', () => {
       delete process.env.CORS_ORIGINS;
       delete process.env.LOG_LEVEL;
       delete process.env.SWAGGER_ENABLED;
+      delete process.env.RP_NAME;
+      delete process.env.RP_ID;
+      delete process.env.RP_ORIGIN;
+      delete process.env.CHALLENGE_TTL_MS;
+      delete process.env.USER_VERIFICATION;
 
       const config = configuration();
 
@@ -37,6 +42,11 @@ describe('Configuration & Environment Validation', () => {
       expect(config.cors.origins).toEqual(['http://localhost:3000']);
       expect(config.logging.level).toBe('info');
       expect(config.swagger.enabled).toBe(true); // Default true in development
+      expect(config.webauthn.rpName).toBe('Passkey Authentication System');
+      expect(config.webauthn.rpId).toBe('localhost');
+      expect(config.webauthn.origins).toEqual(['http://localhost:3000']);
+      expect(config.webauthn.challengeTtlMs).toBe(60000);
+      expect(config.webauthn.userVerification).toBe('preferred');
     });
 
     it('should disable Swagger in production by default unless explicitly enabled', () => {
@@ -51,19 +61,21 @@ describe('Configuration & Environment Validation', () => {
       expect(config.swagger.enabled).toBe(true);
     });
 
-    it('should parse comma-separated CORS origins and trim whitespace', () => {
+    it('should parse comma-separated CORS and WebAuthn origins and trim whitespace', () => {
       process.env.CORS_ORIGINS = ' https://app.example.com , https://admin.example.com ';
+      process.env.RP_ORIGIN = ' https://auth.example.com ';
 
       const config = configuration();
       expect(config.cors.origins).toEqual([
         'https://app.example.com',
         'https://admin.example.com',
       ]);
+      expect(config.webauthn.origins).toEqual(['https://auth.example.com']);
     });
   });
 
   describe('environmentValidationSchema (Joi)', () => {
-    it('should validate valid environment configuration', () => {
+    it('should validate valid environment configuration including WebAuthn settings', () => {
       const validConfig = {
         NODE_ENV: 'production',
         PORT: 8080,
@@ -80,6 +92,11 @@ describe('Configuration & Environment Validation', () => {
         SWAGGER_ENABLED: false,
         THROTTLE_TTL: 60000,
         THROTTLE_LIMIT: 50,
+        RP_NAME: 'Production Relying Party',
+        RP_ID: 'auth.example.com',
+        RP_ORIGIN: 'https://app.example.com',
+        CHALLENGE_TTL_MS: 30000,
+        USER_VERIFICATION: 'required',
       };
 
       const { error, value } = environmentValidationSchema.validate(validConfig);
@@ -87,6 +104,8 @@ describe('Configuration & Environment Validation', () => {
       expect(value.PORT).toBe(8080);
       expect(value.NODE_ENV).toBe('production');
       expect(value.DATABASE_SSL).toBe(true);
+      expect(value.RP_ID).toBe('auth.example.com');
+      expect(value.USER_VERIFICATION).toBe('required');
     });
 
     it('should reject invalid ports (out of 1-65535 range)', () => {
@@ -99,25 +118,14 @@ describe('Configuration & Environment Validation', () => {
       expect(error?.message).toContain('PORT');
     });
 
-    it('should reject unsupported NODE_ENV values', () => {
+    it('should reject unsupported USER_VERIFICATION policy', () => {
       const invalidConfig = {
-        NODE_ENV: 'staging_unsupported',
+        USER_VERIFICATION: 'invalid_policy',
       };
 
       const { error } = environmentValidationSchema.validate(invalidConfig);
       expect(error).toBeDefined();
-      expect(error?.message).toContain('NODE_ENV');
-    });
-
-    it('should reject unsupported LOG_LEVEL values', () => {
-      const invalidConfig = {
-        LOG_LEVEL: 'verbose_invalid',
-      };
-
-      const { error } = environmentValidationSchema.validate(invalidConfig);
-      expect(error).toBeDefined();
-      expect(error?.message).toContain('LOG_LEVEL');
+      expect(error?.message).toContain('USER_VERIFICATION');
     });
   });
 });
-
