@@ -31,6 +31,13 @@ export interface AppConfig {
     ttl: number;
     limit: number;
   };
+  webauthn: {
+    rpName: string;
+    rpId: string;
+    origins: string[];
+    challengeTtlMs: number;
+    userVerification: 'preferred' | 'required' | 'discouraged';
+  };
 }
 
 export interface HealthCheckResult {
@@ -49,3 +56,15 @@ export interface ErrorResponse {
   path: string;
 }
 
+export interface UserSummary {
+  id: string;
+  email: string;
+  status: string;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+export interface AuthSuccessResult {
+  verified: boolean;
+  user: UserSummary;
+}
