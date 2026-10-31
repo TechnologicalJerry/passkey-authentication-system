@@ -8,6 +8,9 @@ import { environmentValidationSchema } from './config/env.validation.js';
 import { LoggingModule } from './logging/logging.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
+import { UsersModule } from './users/users.module.js';
+import { PasskeysModule } from './passkeys/passkeys.module.js';
+import { AuthModule } from './auth/auth.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -44,6 +47,11 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
     // Database connectivity and TypeORM configuration
     DatabaseModule,
+
+    // Core Identity and Passkey Authentication modules
+    UsersModule,
+    PasskeysModule,
+    AuthModule,
 
     // Liveness and readiness health checks
     HealthModule,
