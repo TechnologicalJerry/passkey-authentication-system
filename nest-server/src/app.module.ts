@@ -7,6 +7,8 @@ import configuration from './config/configuration.js';
 import { environmentValidationSchema } from './config/env.validation.js';
 import { LoggingModule } from './logging/logging.module.js';
 import { DatabaseModule } from './database/database.module.js';
+import { AuditModule } from './audit/audit.module.js';
+import { EnrollmentModule } from './enrollment/enrollment.module.js';
 import { HealthModule } from './health/health.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PasskeysModule } from './passkeys/passkeys.module.js';
@@ -34,7 +36,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     // Structured logging via Pino
     LoggingModule,
 
-    // Rate limiting with configurable TTL and limit
+    // Global Rate limiting with configurable TTL and limit
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -48,6 +50,10 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
     // Database connectivity and TypeORM configuration
     DatabaseModule,
+
+    // Audit trail and Enrollment security boundaries
+    AuditModule,
+    EnrollmentModule,
 
     // Core Identity, Passkey Authentication, and Session Management modules
     UsersModule,
