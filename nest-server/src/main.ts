@@ -5,6 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import crypto from 'node:crypto';
+import type { Request, Response, NextFunction } from 'express';
 import { AppModule, ObserveInstrument } from './app.module.js';
 
 async function bootstrap() {
@@ -22,8 +24,36 @@ async function bootstrap() {
   // Enable graceful shutdown hooks
   app.enableShutdownHooks();
 
+  // Trusted proxy configuration for accurate IP extraction behind reverse proxies (NGINX/Cloudflare/ALB)
+  const trustProxy = configService.get<boolean>('security.trustProxy') ?? true;
+  if (trustProxy) {
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.set('trust proxy', 1);
+  }
+
+  // Request Correlation ID Middleware (X-Request-Id)
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const correlationId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
+    (req as Request & { id: string }).id = correlationId;
+    res.setHeader('X-Request-Id', correlationId);
+    next();
+  });
+
   // Security headers with Helmet
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:'],
+          connectSrc: ["'self'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Parse HTTP cookies for secure refresh-token delivery
   app.use(cookieParser());
@@ -45,7 +75,8 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id'],
   });
 
   // Global API routing prefix and URI-based API versioning
@@ -92,6 +123,8 @@ async function bootstrap() {
       )
       .addTag('Passkey Authentication', 'WebAuthn passkey registration and authentication ceremonies')
       .addTag('Sessions & Tokens', 'Session lifecycle, refresh token rotation, and logout')
+      .addTag('User Account Lifecycle', 'User profile management, account deactivation and deletion')
+      .addTag('Passkey & Credential Management', 'User passkey listing, renaming, and revocation with lockout protection')
       .addTag('Health', 'System liveness and dependency readiness probes')
       .addTag('Root', 'Core service information and root endpoints')
       .build();
