@@ -11,7 +11,10 @@ import { randomUUID } from 'node:crypto';
 import { Session, RevocationReason } from './entities/session.entity.js';
 import { User, UserStatus } from '../users/entities/user.entity.js';
 import { TokenService } from '../auth/token.service.js';
+import { AuditService } from '../audit/audit.service.js';
+import { AuditEventType, AuditOutcome } from '../audit/entities/audit-log.entity.js';
 import type { AppConfig, SessionSummary, TokenPair } from '../common/types/index.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 export interface CreateSessionParams {
   userId: string;
@@ -36,6 +39,7 @@ export class SessionsService {
     private readonly tokenService: TokenService,
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
+    private readonly auditService: AuditService,
   ) {}
 
   private get sessionConfig(): AppConfig['session'] {
@@ -50,129 +54,125 @@ export class SessionsService {
     session: Session;
     rawRefreshToken: string;
   }> {
+    const rawRefreshToken = this.tokenService.generateRefreshToken();
+    const refreshTokenHash = this.tokenService.hashRefreshToken(rawRefreshToken);
+    const refreshTokenFamily = randomUUID();
+
+    const ttlDays = this.sessionConfig.refreshTokenTtlDays;
+    const expiresAt = new Date(Date.now() + ttlDays * 86400 * 1000);
+
+    const deviceLabel =
+      params.deviceLabel ?? this.deriveDeviceLabel(params.userAgent);
+
     const execute = async (em: EntityManager) => {
       const sessionRepo = em.getRepository(Session);
-      const now = new Date();
 
-      // 1. Enforce active session limit
+      // Enforce max active sessions by revoking the oldest active session if limit exceeded
       const activeSessions = await sessionRepo.find({
         where: {
           userId: params.userId,
           revokedAt: IsNull(),
-          expiresAt: MoreThan(now),
+          expiresAt: MoreThan(new Date()),
         },
-        order: { lastActivityAt: 'ASC' },
+        order: { createdAt: 'ASC' },
       });
 
       const maxSessions = this.sessionConfig.maxActiveSessions;
       if (activeSessions.length >= maxSessions) {
-        // Evict oldest session(s)
         const excessCount = activeSessions.length - maxSessions + 1;
         const sessionsToEvict = activeSessions.slice(0, excessCount);
-        for (const oldSession of sessionsToEvict) {
-          oldSession.revokedAt = now;
-          oldSession.revocationReason = RevocationReason.SESSION_LIMIT_EXCEEDED;
-          await sessionRepo.save(oldSession);
+
+        for (const s of sessionsToEvict) {
+          s.revokedAt = new Date();
+          s.revocationReason = RevocationReason.SESSION_LIMIT_EXCEEDED;
+          await sessionRepo.save(s);
+
           this.logger.log(
             JSON.stringify({
               event: 'session.evicted',
               userId: params.userId,
-              sessionId: oldSession.id,
-              reason: RevocationReason.SESSION_LIMIT_EXCEEDED,
-              timestamp: now.toISOString(),
+              sessionId: s.id,
+              reason: 'SESSION_LIMIT_EXCEEDED',
             }),
           );
         }
       }
 
-      // 2. Generate raw refresh token and compute hash
-      const rawRefreshToken = this.tokenService.generateRefreshToken();
-      const refreshTokenHash = this.tokenService.hashRefreshToken(rawRefreshToken);
-      const refreshTokenFamily = randomUUID();
-
-      const refreshTtlMs = this.sessionConfig.refreshTokenTtlDays * 86400 * 1000;
-      const expiresAt = new Date(now.getTime() + refreshTtlMs);
-
-      // 3. Persist session entity
       const session = sessionRepo.create({
         userId: params.userId,
         refreshTokenHash,
         previousRefreshTokenHash: null,
         refreshTokenFamily,
         expiresAt,
-        lastActivityAt: now,
-        lastRefreshAt: now,
+        lastActivityAt: new Date(),
+        lastRefreshAt: new Date(),
         ipAddress: params.ipAddress ?? null,
         userAgent: params.userAgent ? params.userAgent.slice(0, 512) : null,
-        deviceLabel: params.deviceLabel ?? null,
+        deviceLabel,
       });
 
-      const savedSession = await sessionRepo.save(session);
+      const saved = await sessionRepo.save(session);
 
-      this.logger.log(
-        JSON.stringify({
-          event: 'session.created',
-          userId: params.userId,
-          sessionId: savedSession.id,
-          familyId: refreshTokenFamily,
-          timestamp: now.toISOString(),
-        }),
-      );
+      await this.auditService.logEvent({
+        eventType: AuditEventType.SESSION_CREATED,
+        actorUserId: params.userId,
+        targetResourceId: saved.id,
+        outcome: AuditOutcome.SUCCESS,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+        metadata: { deviceLabel },
+      });
 
-      return {
-        session: savedSession,
-        rawRefreshToken,
-      };
+      return saved;
     };
 
-    if (params.entityManager) {
-      return execute(params.entityManager);
-    }
-    return this.dataSource.transaction(execute);
+    const session = params.entityManager
+      ? await execute(params.entityManager)
+      : await this.dataSource.transaction(execute);
+
+    return {
+      session,
+      rawRefreshToken,
+    };
   }
 
   /**
-   * Concurrency-safe refresh token rotation with immediate reuse detection.
-   * If an old/rotated refresh token is presented, the entire session family is revoked.
+   * Concurrency-safe refresh token rotation using row-level locking.
+   * Detects reuse/replay attacks and invalidates the entire token family upon violation.
    */
   async rotateRefreshToken(
-    rawRefreshToken: string,
+    presentedRawToken: string,
     metadata?: { ipAddress?: string | null; userAgent?: string | null },
   ): Promise<RotateTokenResult> {
-    const presentedHash = this.tokenService.hashRefreshToken(rawRefreshToken);
+    const presentedHash = this.tokenService.hashRefreshToken(presentedRawToken);
     const now = new Date();
 
     return this.dataSource.transaction(async (em) => {
       const sessionRepo = em.getRepository(Session);
 
-      // Lock row with pessimistic write to ensure concurrent requests cannot race
-      const session = await sessionRepo.findOne({
-        where: [
-          { refreshTokenHash: presentedHash },
-          { previousRefreshTokenHash: presentedHash },
-        ],
-        lock: { mode: 'pessimistic_write' },
-        relations: ['user'],
-      });
+      // Pessimistic write lock: lock matching session row
+      const session = await sessionRepo
+        .createQueryBuilder('session')
+        .setLock('pessimistic_write')
+        .leftJoinAndSelect('session.user', 'user')
+        .where(
+          '(session.refreshTokenHash = :hash OR session.previousRefreshTokenHash = :hash)',
+          { hash: presentedHash },
+        )
+        .getOne();
 
       if (!session) {
-        this.logger.warn(
-          JSON.stringify({
-            event: 'session.rejected',
-            reason: 'UNKNOWN_REFRESH_TOKEN',
-            timestamp: now.toISOString(),
-          }),
-        );
-        throw new UnauthorizedException('Invalid refresh token');
+        this.logger.warn('Refresh attempt with unrecognized token hash');
+        throw new UnauthorizedException('Invalid or expired refresh token');
       }
 
-      // Check for reuse attack: presented token matches the previously rotated token
+      // Check for reuse of an already-rotated token (Replay Attack Detection)
       if (session.previousRefreshTokenHash === presentedHash) {
         session.revokedAt = now;
         session.revocationReason = RevocationReason.REUSE_DETECTED;
         await sessionRepo.save(session);
 
-        // Also revoke any other sessions in this family for security
+        // Revoke all sessions in this family immediately
         await sessionRepo.update(
           {
             refreshTokenFamily: session.refreshTokenFamily,
@@ -183,6 +183,16 @@ export class SessionsService {
             revocationReason: RevocationReason.REUSE_DETECTED,
           },
         );
+
+        await this.auditService.logEvent({
+          eventType: AuditEventType.TOKEN_REUSE_DETECTED,
+          actorUserId: session.userId,
+          targetResourceId: session.id,
+          outcome: AuditOutcome.FAILURE,
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+          metadata: { familyId: session.refreshTokenFamily },
+        });
 
         this.logger.error(
           JSON.stringify({
@@ -237,14 +247,14 @@ export class SessionsService {
         sessionId: session.id,
       });
 
-      this.logger.log(
-        JSON.stringify({
-          event: 'session.rotated',
-          userId: session.userId,
-          sessionId: session.id,
-          timestamp: now.toISOString(),
-        }),
-      );
+      await this.auditService.logEvent({
+        eventType: AuditEventType.TOKEN_ROTATED,
+        actorUserId: session.userId,
+        targetResourceId: session.id,
+        outcome: AuditOutcome.SUCCESS,
+        ipAddress: metadata?.ipAddress,
+        userAgent: metadata?.userAgent,
+      });
 
       return {
         session: updatedSession,
@@ -314,6 +324,14 @@ export class SessionsService {
     session.revocationReason = reason;
     await this.sessionRepository.save(session);
 
+    await this.auditService.logEvent({
+      eventType: AuditEventType.SESSION_REVOKED,
+      actorUserId: userId,
+      targetResourceId: sessionId,
+      outcome: AuditOutcome.SUCCESS,
+      metadata: { reason },
+    });
+
     this.logger.log(
       JSON.stringify({
         event: 'session.revoked',
@@ -326,7 +344,7 @@ export class SessionsService {
   }
 
   /**
-   * Revokes all active sessions for a user (Logout from all devices).
+   * Revokes all active sessions for a user (Logout from all devices / Deactivation).
    */
   async revokeAllUserSessions(
     userId: string,
@@ -351,6 +369,13 @@ export class SessionsService {
     const result = await query.execute();
     const affected = result.affected ?? 0;
 
+    await this.auditService.logEvent({
+      eventType: AuditEventType.ALL_SESSIONS_LOGOUT,
+      actorUserId: userId,
+      outcome: AuditOutcome.SUCCESS,
+      metadata: { revokedCount: affected, reason },
+    });
+
     this.logger.log(
       JSON.stringify({
         event: 'session.all_revoked',
@@ -365,15 +390,21 @@ export class SessionsService {
   }
 
   /**
-   * Lists all sessions for the authenticated user with masked, safe metadata.
+   * Lists sessions for the authenticated user with masked, safe metadata and database pagination.
    */
   async listUserSessions(
     userId: string,
     currentSessionId?: string,
+    pagination?: PaginationQueryDto,
   ): Promise<SessionSummary[]> {
+    const limit = pagination?.limit ?? 50;
+    const offset = pagination?.offset ?? 0;
+
     const sessions = await this.sessionRepository.find({
       where: { userId },
       order: { lastActivityAt: 'DESC' },
+      take: limit,
+      skip: offset,
     });
 
     return sessions.map((s) => ({
@@ -388,5 +419,24 @@ export class SessionsService {
       isRevoked: s.revokedAt !== null,
     }));
   }
-}
 
+  private deriveDeviceLabel(userAgent?: string | null): string {
+    if (!userAgent) return 'Unknown Device';
+    if (userAgent.includes('Macintosh') || userAgent.includes('Mac OS')) {
+      return userAgent.includes('Chrome') ? 'Chrome on macOS' : 'Safari on macOS';
+    }
+    if (userAgent.includes('Windows')) {
+      return userAgent.includes('Edg') ? 'Edge on Windows' : 'Chrome on Windows';
+    }
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+      return 'Mobile Safari on iOS';
+    }
+    if (userAgent.includes('Android')) {
+      return 'Chrome on Android';
+    }
+    if (userAgent.includes('Linux')) {
+      return 'Browser on Linux';
+    }
+    return 'Web Browser';
+  }
+}
