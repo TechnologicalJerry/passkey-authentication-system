@@ -52,6 +52,12 @@ export interface AppConfig {
     cookieSecure: boolean;
     cookieSameSite: 'lax' | 'strict' | 'none';
   };
+  enrollment: {
+    invitationRequired: boolean;
+  };
+  security: {
+    trustProxy: boolean;
+  };
 }
 
 export interface HealthCheckResult {
@@ -68,14 +74,26 @@ export interface ErrorResponse {
   message: string | object;
   timestamp: string;
   path: string;
+  requestId?: string;
 }
 
 export interface UserSummary {
   id: string;
   email: string;
+  displayName?: string | null;
   status: string;
   emailVerified: boolean;
   createdAt: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string | null;
+  status: string;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TokenPair {
@@ -119,4 +137,24 @@ export interface SessionSummary {
   deviceLabel: string | null;
   isCurrent: boolean;
   isRevoked: boolean;
+}
+
+export interface PasskeySummary {
+  id: string;
+  credentialId: string;
+  label: string;
+  deviceType: string | null;
+  backedUp: boolean;
+  transports: string[] | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+  isRevoked: boolean;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
 }
