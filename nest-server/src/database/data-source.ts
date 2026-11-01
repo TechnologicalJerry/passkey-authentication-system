@@ -3,7 +3,9 @@ import { DataSource, type DataSourceOptions } from 'typeorm';
 import { User } from '../users/entities/user.entity.js';
 import { PasskeyCredential } from '../passkeys/entities/passkey-credential.entity.js';
 import { AuthChallenge } from '../auth/entities/auth-challenge.entity.js';
+import { Session } from '../sessions/entities/session.entity.js';
 import { CreateIdentityAndPasskeyTables1730400000000 } from './migrations/1730400000000-CreateIdentityAndPasskeyTables.js';
+import { CreateSessionsTable1730500000000 } from './migrations/1730500000000-CreateSessionsTable.js';
 
 const isTsMode =
   process.env.NODE_ENV !== 'production' ||
@@ -20,8 +22,8 @@ export const dataSourceOptions: DataSourceOptions = {
   ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',
-  entities: [User, PasskeyCredential, AuthChallenge],
-  migrations: [CreateIdentityAndPasskeyTables1730400000000],
+  entities: [User, PasskeyCredential, AuthChallenge, Session],
+  migrations: [CreateIdentityAndPasskeyTables1730400000000, CreateSessionsTable1730500000000],
 };
 
 export const AppDataSource = new DataSource(dataSourceOptions);
