@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -18,11 +19,13 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { SessionsService } from './sessions.service.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { SessionIdParamDto } from './dto/session-id-param.dto.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import type {
@@ -49,6 +52,7 @@ export class SessionsController {
 
   @Post('token/refresh')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({
     summary: 'Rotate refresh token and issue new access token',
     description:
@@ -75,6 +79,20 @@ export class SessionsController {
       throw new UnauthorizedException('Refresh token is required via cookie or request body');
     }
 
+    // CSRF Protection for cookie-based refresh requests:
+    // If request was submitted using an HttpOnly cookie and sends Origin or Referer header,
+    // verify it matches the configured CORS allowlist.
+    if (cookieToken && !dto.refreshToken) {
+      const origin = req.headers['origin'] || req.headers['referer'];
+      if (origin && typeof origin === 'string') {
+        const allowedOrigins = this.configService.get<string[]>('cors.origins') ?? ['http://localhost:3000'];
+        const isAllowed = allowedOrigins.some((allowed) => origin.startsWith(allowed));
+        if (!isAllowed) {
+          throw new UnauthorizedException('Cross-Site Request Forgery (CSRF) validation failed');
+        }
+      }
+    }
+
     const ipAddress = req.ip ?? null;
     const userAgent = req.headers['user-agent'] ?? null;
 
@@ -91,6 +109,7 @@ export class SessionsController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer')
   @ApiOperation({
@@ -115,6 +134,7 @@ export class SessionsController {
 
   @Post('logout/all')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer')
   @ApiOperation({
@@ -144,16 +164,20 @@ export class SessionsController {
   @ApiOperation({
     summary: 'List user sessions',
     description:
-      'Returns active and historical sessions for the current user with safe metadata (no tokens/hashes).',
+      'Returns active and historical sessions for the current user with safe metadata (no tokens/hashes) and optional pagination.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Sessions listed successfully' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
-  async listSessions(@CurrentUser() user: AuthenticatedUser): Promise<SessionSummary[]> {
-    return this.sessionsService.listUserSessions(user.id, user.sessionId);
+  async listSessions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() pagination?: PaginationQueryDto,
+  ): Promise<SessionSummary[]> {
+    return this.sessionsService.listUserSessions(user.id, user.sessionId, pagination);
   }
 
   @Delete('sessions/:id')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer')
   @ApiOperation({
@@ -207,4 +231,3 @@ export class SessionsController {
     });
   }
 }
-
