@@ -8,6 +8,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
@@ -38,6 +39,7 @@ export class AuthController {
 
   @Post('registration/options')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Generate passkey registration options',
     description:
@@ -59,6 +61,7 @@ export class AuthController {
 
   @Post('registration/verify')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     summary: 'Verify passkey registration response',
     description:
@@ -84,6 +87,7 @@ export class AuthController {
 
   @Post('authentication/options')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     summary: 'Generate passkey authentication options',
     description:
@@ -105,6 +109,7 @@ export class AuthController {
 
   @Post('authentication/verify')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     summary: 'Verify passkey authentication assertion and establish session',
     description:
