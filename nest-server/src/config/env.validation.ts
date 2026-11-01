@@ -79,4 +79,9 @@ export const environmentValidationSchema = Joi.object({
   COOKIE_SAME_SITE: Joi.string()
     .valid('lax', 'strict', 'none')
     .default('lax'),
+
+  // Stage 4 Hardening & Enrollment
+  ENROLLMENT_INVITATION_REQUIRED: Joi.boolean().default(false),
+
+  TRUST_PROXY: Joi.boolean().default(true),
 });
