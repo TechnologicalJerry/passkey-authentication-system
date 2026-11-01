@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { PasskeyCredential } from '../../passkeys/entities/passkey-credential.entity.js';
 import { AuthChallenge } from '../../auth/entities/auth-challenge.entity.js';
+import { Session } from '../../sessions/entities/session.entity.js';
 
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
@@ -48,6 +49,9 @@ export class User {
   @OneToMany(() => AuthChallenge, (challenge) => challenge.user)
   challenges!: AuthChallenge[];
 
+  @OneToMany(() => Session, (session) => session.user)
+  sessions!: Session[];
+
   /**
    * Helper to consistently sanitize and normalize email addresses.
    */
@@ -55,4 +59,3 @@ export class User {
     return rawEmail.trim().toLowerCase();
   }
 }
-
