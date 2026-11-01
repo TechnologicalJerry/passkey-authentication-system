@@ -49,4 +49,34 @@ export const environmentValidationSchema = Joi.object({
   USER_VERIFICATION: Joi.string()
     .valid('preferred', 'required', 'discouraged')
     .default('preferred'),
+
+  // JWT Access Token Configuration
+  JWT_ACCESS_SECRET: Joi.string()
+    .min(32)
+    .default('dev-jwt-access-secret-min-32-chars-key!'),
+
+  JWT_ACCESS_TTL: Joi.string()
+    .pattern(/^[0-9]+[smhd]$/)
+    .default('15m'),
+
+  JWT_ISSUER: Joi.string().trim().default('passkey-auth-api'),
+
+  JWT_AUDIENCE: Joi.string().trim().default('passkey-auth-app'),
+
+  // Session & Refresh Token Configuration
+  REFRESH_TOKEN_TTL_DAYS: Joi.number().integer().min(1).max(90).default(7),
+
+  REFRESH_TOKEN_SECRET: Joi.string()
+    .min(32)
+    .default('dev-refresh-token-hmac-salt-32-chars!'),
+
+  MAX_ACTIVE_SESSIONS_PER_USER: Joi.number().integer().min(1).max(20).default(5),
+
+  COOKIE_NAME: Joi.string().trim().default('refresh_token'),
+
+  COOKIE_SECURE: Joi.boolean().default(false),
+
+  COOKIE_SAME_SITE: Joi.string()
+    .valid('lax', 'strict', 'none')
+    .default('lax'),
 });
