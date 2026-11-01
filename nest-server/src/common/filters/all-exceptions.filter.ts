@@ -16,11 +16,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<Request & { id?: string }>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | object = 'An unexpected error occurred';
     let errorName = 'InternalServerError';
+
+    const requestId = request?.id ?? (request?.headers?.['x-request-id'] as string) ?? undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -34,16 +36,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
         errorName = (resObj['error'] as string) ?? exception.name;
       }
     } else if (exception instanceof Error) {
-      this.logger.error(
-        `Unhandled exception on ${request?.method ?? 'UNKNOWN'} ${request?.url ?? 'UNKNOWN'}: ${exception.message}`,
-        exception.stack,
-      );
-      // In production and general safe mode, internal errors remain generic
-      message = 'An unexpected error occurred';
-      errorName = 'InternalServerError';
+      // Check for PostgreSQL unique constraint violation (code 23505)
+      if ((exception as Record<string, unknown>)?.['code'] === '23505') {
+        status = HttpStatus.CONFLICT;
+        message = 'A resource with the provided unique identifier already exists';
+        errorName = 'ConflictException';
+      } else {
+        this.logger.error(
+          `Unhandled exception on ${request?.method ?? 'UNKNOWN'} ${request?.url ?? 'UNKNOWN'} [reqId: ${requestId ?? 'none'}]: ${exception.message}`,
+          exception.stack,
+        );
+        message = 'An unexpected error occurred';
+        errorName = 'InternalServerError';
+      }
     } else {
       this.logger.error(
-        `Unhandled non-error exception on ${request?.method ?? 'UNKNOWN'} ${request?.url ?? 'UNKNOWN'}`,
+        `Unhandled non-error exception on ${request?.method ?? 'UNKNOWN'} ${request?.url ?? 'UNKNOWN'} [reqId: ${requestId ?? 'none'}]`,
         String(exception),
       );
       message = 'An unexpected error occurred';
@@ -56,9 +64,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       timestamp: new Date().toISOString(),
       path: request?.url ?? '',
+      ...(requestId ? { requestId } : {}),
     };
 
     response.status(status).json(errorPayload);
   }
 }
-
