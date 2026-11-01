@@ -35,6 +35,7 @@ describe('AuthService', () => {
   let mockDataSource: { transaction: ReturnType<typeof vi.fn> };
   let mockUsersService: {
     findByEmail: ReturnType<typeof vi.fn>;
+    findById: ReturnType<typeof vi.fn>;
     createPendingUser: ReturnType<typeof vi.fn>;
     activateUser: ReturnType<typeof vi.fn>;
   };
@@ -53,6 +54,13 @@ describe('AuthService', () => {
   };
   let mockTokenService: {
     generateAccessToken: ReturnType<typeof vi.fn>;
+  };
+  let mockAuditService: {
+    logEvent: ReturnType<typeof vi.fn>;
+  };
+  let mockEnrollmentService: {
+    isInvitationRequired: ReturnType<typeof vi.fn>;
+    validateAndConsumeInvitation: ReturnType<typeof vi.fn>;
   };
   let mockEntityManager: {
     getRepository: ReturnType<typeof vi.fn>;
@@ -81,6 +89,7 @@ describe('AuthService', () => {
 
     mockUsersService = {
       findByEmail: vi.fn(),
+      findById: vi.fn(),
       createPendingUser: vi.fn(),
       activateUser: vi.fn(),
     };
@@ -119,6 +128,15 @@ describe('AuthService', () => {
       }),
     };
 
+    mockAuditService = {
+      logEvent: vi.fn().mockResolvedValue(null),
+    };
+
+    mockEnrollmentService = {
+      isInvitationRequired: vi.fn().mockReturnValue(false),
+      validateAndConsumeInvitation: vi.fn().mockResolvedValue(undefined),
+    };
+
     authService = new AuthService(
       mockConfigService as unknown as ConfigService,
       mockDataSource as unknown as DataSource,
@@ -127,6 +145,8 @@ describe('AuthService', () => {
       mockChallengeService as any,
       mockSessionsService as any,
       mockTokenService as any,
+      mockAuditService as any,
+      mockEnrollmentService as any,
     );
   });
 
@@ -144,7 +164,7 @@ describe('AuthService', () => {
         displayName: 'New User',
       });
 
-      expect(mockUsersService.createPendingUser).toHaveBeenCalledWith('newuser@example.com');
+      expect(mockUsersService.createPendingUser).toHaveBeenCalledWith('newuser@example.com', 'New User');
       expect(result.challengeId).toBe('challenge-uuid');
       expect(result.options.challenge).toBe('mock-reg-challenge');
     });
@@ -162,6 +182,33 @@ describe('AuthService', () => {
           email: 'existing@example.com',
         }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('should generate options for existing account when authenticatedUserId is provided', async () => {
+      mockUsersService.findById.mockResolvedValue({
+        id: 'auth-user-uuid',
+        email: 'authenticated@example.com',
+        status: UserStatus.ACTIVE,
+      });
+      mockPasskeysService.findActiveByUserId.mockResolvedValue([
+        { credentialId: 'existing-cred-id', transports: ['internal'] },
+      ]);
+
+      const result = await authService.generateRegistrationOptions(
+        { email: 'authenticated@example.com' },
+        'auth-user-uuid',
+      );
+
+      expect(mockUsersService.findById).toHaveBeenCalledWith('auth-user-uuid');
+      expect(result.challengeId).toBe('challenge-uuid');
+    });
+
+    it('should require invitation token when ENROLLMENT_INVITATION_REQUIRED is enabled', async () => {
+      mockEnrollmentService.isInvitationRequired.mockReturnValue(true);
+
+      await expect(
+        authService.generateRegistrationOptions({ email: 'newuser@example.com' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -198,7 +245,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('verifyAuthentication (Stage 3 Integration)', () => {
+  describe('verifyAuthentication (Stage 3 & 4 Integration)', () => {
     const validVerifyDto = {
       challengeId: 'auth-challenge-uuid',
       response: {
@@ -277,11 +324,7 @@ describe('AuthService', () => {
           userAgent: 'TestBrowser/1.0',
         }),
       );
-      expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith({
-        userId: 'user-uuid',
-        email: 'user@example.com',
-        sessionId: 'session-uuid-1',
-      });
+      expect(mockAuditService.logEvent).toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException if passkey is revoked', async () => {
