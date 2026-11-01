@@ -38,6 +38,20 @@ export interface AppConfig {
     challengeTtlMs: number;
     userVerification: 'preferred' | 'required' | 'discouraged';
   };
+  jwt: {
+    accessSecret: string;
+    accessTtl: string;
+    issuer: string;
+    audience: string;
+  };
+  session: {
+    refreshTokenTtlDays: number;
+    refreshTokenSecret: string;
+    maxActiveSessions: number;
+    cookieName: string;
+    cookieSecure: boolean;
+    cookieSameSite: 'lax' | 'strict' | 'none';
+  };
 }
 
 export interface HealthCheckResult {
@@ -64,7 +78,45 @@ export interface UserSummary {
   createdAt: string;
 }
 
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number; // in seconds
+  tokenType: 'Bearer';
+}
+
 export interface AuthSuccessResult {
   verified: boolean;
   user: UserSummary;
+  tokens?: TokenPair;
+}
+
+export interface JwtPayload {
+  sub: string;
+  email: string;
+  sessionId: string;
+  jti: string;
+  iat?: number;
+  exp?: number;
+  iss?: string;
+  aud?: string;
+}
+
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  sessionId: string;
+  tokenId: string;
+}
+
+export interface SessionSummary {
+  id: string;
+  createdAt: string;
+  lastActivityAt: string;
+  expiresAt: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  deviceLabel: string | null;
+  isCurrent: boolean;
+  isRevoked: boolean;
 }
