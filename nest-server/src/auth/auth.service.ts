@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ConflictException,
   UnauthorizedException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
@@ -26,6 +28,9 @@ import { ChallengeService } from './challenge.service.js';
 import { ChallengeCeremony } from './entities/auth-challenge.entity.js';
 import { TokenService } from './token.service.js';
 import { SessionsService } from '../sessions/sessions.service.js';
+import { AuditService } from '../audit/audit.service.js';
+import { AuditEventType, AuditOutcome } from '../audit/entities/audit-log.entity.js';
+import { EnrollmentService } from '../enrollment/enrollment.service.js';
 import { RegistrationOptionsDto } from './dto/registration-options.dto.js';
 import { RegistrationVerifyDto } from './dto/registration-verify.dto.js';
 import { AuthenticationOptionsDto } from './dto/authentication-options.dto.js';
@@ -49,11 +54,16 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => PasskeysService))
     private readonly passkeysService: PasskeysService,
     private readonly challengeService: ChallengeService,
+    @Inject(forwardRef(() => SessionsService))
     private readonly sessionsService: SessionsService,
     private readonly tokenService: TokenService,
+    private readonly auditService: AuditService,
+    private readonly enrollmentService: EnrollmentService,
   ) {}
 
   private get webauthnConfig(): AppConfig['webauthn'] {
@@ -61,27 +71,53 @@ export class AuthService {
   }
 
   /**
-   * Generates WebAuthn registration options for a new user enrollment.
+   * Generates WebAuthn registration options for a new user enrollment or adding a passkey to an existing account.
    *
-   * Security Boundary:
-   * Rejects unauthenticated attempts to add credentials to existing accounts that already have
-   * registered passkeys (preventing unauthenticated passkey injection / account takeover).
+   * Security Boundaries:
+   * 1. If unauthenticated, rejects registration for existing accounts with active passkeys (prevents unauthenticated injection).
+   * 2. If ENROLLMENT_INVITATION_REQUIRED is enabled, requires a valid, single-use invitation token.
+   * 3. If authenticatedUserId is supplied, allows an existing authenticated user to enroll additional credentials safely.
    */
   async generateRegistrationOptions(
     dto: RegistrationOptionsDto,
+    authenticatedUserId?: string,
   ): Promise<RegistrationOptionsResult> {
-    const normalizedEmail = User.normalizeEmail(dto.email);
-    let user = await this.usersService.findByEmail(normalizedEmail);
+    let user: User | null = null;
 
-    if (user) {
-      const hasCredentials = await this.passkeysService.hasActiveCredentials(user.id);
-      if (hasCredentials) {
-        throw new ConflictException(
-          'An account with this email address already exists. Please authenticate first to register additional passkeys.',
-        );
+    if (authenticatedUserId) {
+      // Authenticated User: Adding a new passkey to their own account
+      user = await this.usersService.findById(authenticatedUserId);
+      if (!user || user.status === UserStatus.SUSPENDED) {
+        throw new UnauthorizedException('User account not found or suspended');
       }
     } else {
-      user = await this.usersService.createPendingUser(normalizedEmail);
+      // Unauthenticated Enrollment Boundary
+      const normalizedEmail = User.normalizeEmail(dto.email);
+
+      if (this.enrollmentService.isInvitationRequired()) {
+        if (!dto.invitationToken) {
+          throw new BadRequestException(
+            'An enrollment invitation token is required to register an account.',
+          );
+        }
+        await this.enrollmentService.validateAndConsumeInvitation(
+          dto.invitationToken,
+          normalizedEmail,
+        );
+      }
+
+      user = await this.usersService.findByEmail(normalizedEmail);
+
+      if (user) {
+        const hasCredentials = await this.passkeysService.hasActiveCredentials(user.id);
+        if (hasCredentials) {
+          throw new ConflictException(
+            'An account with this email address already exists. Please authenticate first to register additional passkeys.',
+          );
+        }
+      } else {
+        user = await this.usersService.createPendingUser(normalizedEmail, dto.displayName);
+      }
     }
 
     const existingCredentials = await this.passkeysService.findActiveByUserId(user.id);
@@ -95,7 +131,7 @@ export class AuthService {
       rpID: this.webauthnConfig.rpId,
       userID: Buffer.from(user.id),
       userName: user.email,
-      userDisplayName: dto.displayName ?? user.email,
+      userDisplayName: dto.displayName ?? user.displayName ?? user.email,
       attestationType: 'none',
       authenticatorSelection: {
         residentKey: 'preferred',
@@ -110,6 +146,14 @@ export class AuthService {
       ceremonyType: ChallengeCeremony.REGISTRATION,
       userId: user.id,
       ttlMs: this.webauthnConfig.challengeTtlMs,
+    });
+
+    await this.auditService.logEvent({
+      eventType: AuditEventType.PASSKEY_REGISTRATION_STARTED,
+      actorUserId: user.id,
+      targetResourceId: challenge.id,
+      outcome: AuditOutcome.SUCCESS,
+      metadata: { email: user.email },
     });
 
     return {
@@ -157,15 +201,32 @@ export class AuthService {
       }
 
       // 4. Verify cryptographic attestation response
-      const verification = await verifyRegistrationResponse({
-        response: dto.response,
-        expectedChallenge: challenge.challenge,
-        expectedOrigin: this.webauthnConfig.origins,
-        expectedRPID: this.webauthnConfig.rpId,
-        requireUserVerification: this.webauthnConfig.userVerification === 'required',
-      });
+      let verification;
+      try {
+        verification = await verifyRegistrationResponse({
+          response: dto.response,
+          expectedChallenge: challenge.challenge,
+          expectedOrigin: this.webauthnConfig.origins,
+          expectedRPID: this.webauthnConfig.rpId,
+          requireUserVerification: this.webauthnConfig.userVerification === 'required',
+        });
+      } catch (err) {
+        await this.auditService.logEvent({
+          eventType: AuditEventType.PASSKEY_REGISTRATION_FAILED,
+          actorUserId: user.id,
+          outcome: AuditOutcome.FAILURE,
+          metadata: { reason: (err as Error).message },
+        });
+        throw new BadRequestException(`Passkey verification error: ${(err as Error).message}`);
+      }
 
       if (!verification.verified || !verification.registrationInfo) {
+        await this.auditService.logEvent({
+          eventType: AuditEventType.PASSKEY_REGISTRATION_FAILED,
+          actorUserId: user.id,
+          outcome: AuditOutcome.FAILURE,
+          metadata: { reason: 'Attestation verification returned false' },
+        });
         throw new BadRequestException('Passkey registration attestation verification failed');
       }
 
@@ -203,6 +264,7 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
+          displayName: user.displayName,
           status: user.status,
           emailVerified: !!user.emailVerifiedAt,
           createdAt: user.createdAt.toISOString(),
@@ -228,6 +290,10 @@ export class AuthService {
 
       if (!user) {
         throw new BadRequestException('No credentials found for the specified account');
+      }
+
+      if (user.status === UserStatus.SUSPENDED) {
+        throw new UnauthorizedException('Account is suspended');
       }
 
       const userCredentials = await this.passkeysService.findActiveByUserId(user.id);
@@ -284,35 +350,79 @@ export class AuthService {
       });
 
       if (!credential || credential.revokedAt !== null) {
+        await this.auditService.logEvent({
+          eventType: AuditEventType.PASSKEY_AUTHENTICATION_FAILED,
+          outcome: AuditOutcome.FAILURE,
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+          metadata: { reason: 'Credential not recognized or revoked' },
+        });
         throw new UnauthorizedException('Passkey credential not recognized or has been revoked');
       }
 
       // 3. Verify user binding if options were bound to a specific user
       if (challenge.userId && challenge.userId !== credential.userId) {
+        await this.auditService.logEvent({
+          eventType: AuditEventType.PASSKEY_AUTHENTICATION_FAILED,
+          actorUserId: credential.userId,
+          outcome: AuditOutcome.FAILURE,
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+          metadata: { reason: 'User mismatch with bound challenge' },
+        });
         throw new UnauthorizedException('Presented passkey does not belong to the requested account');
       }
 
       const user = credential.user;
       if (!user || user.status === UserStatus.SUSPENDED) {
+        await this.auditService.logEvent({
+          eventType: AuditEventType.PASSKEY_AUTHENTICATION_FAILED,
+          actorUserId: credential.userId,
+          outcome: AuditOutcome.FAILURE,
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+          metadata: { reason: 'Account suspended' },
+        });
         throw new UnauthorizedException('User account is suspended or inactive');
       }
 
       // 4. Verify assertion signature via SimpleWebAuthn
-      const verification = await verifyAuthenticationResponse({
-        response: dto.response,
-        expectedChallenge: challenge.challenge,
-        expectedOrigin: this.webauthnConfig.origins,
-        expectedRPID: this.webauthnConfig.rpId,
-        credential: {
-          id: credential.credentialId,
-          publicKey: new Uint8Array(credential.publicKey),
-          counter: Number(credential.counter),
-          transports: (credential.transports as AuthenticatorTransportFuture[]) ?? undefined,
-        },
-        requireUserVerification: this.webauthnConfig.userVerification === 'required',
-      });
+      let verification;
+      try {
+        verification = await verifyAuthenticationResponse({
+          response: dto.response,
+          expectedChallenge: challenge.challenge,
+          expectedOrigin: this.webauthnConfig.origins,
+          expectedRPID: this.webauthnConfig.rpId,
+          credential: {
+            id: credential.credentialId,
+            publicKey: new Uint8Array(credential.publicKey),
+            counter: Number(credential.counter),
+            transports: (credential.transports as AuthenticatorTransportFuture[]) ?? undefined,
+          },
+          requireUserVerification: this.webauthnConfig.userVerification === 'required',
+        });
+      } catch (err) {
+        await this.auditService.logEvent({
+          eventType: AuditEventType.PASSKEY_AUTHENTICATION_FAILED,
+          actorUserId: user.id,
+          outcome: AuditOutcome.FAILURE,
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+          metadata: { reason: (err as Error).message },
+        });
+        throw new UnauthorizedException(`Passkey assertion verification failed: ${(err as Error).message}`);
+      }
 
       if (!verification.verified || !verification.authenticationInfo) {
+        await this.auditService.logEvent({
+          eventType: AuditEventType.PASSKEY_AUTHENTICATION_FAILED,
+          actorUserId: user.id,
+          outcome: AuditOutcome.FAILURE,
+          ipAddress: metadata?.ipAddress,
+          userAgent: metadata?.userAgent,
+          metadata: { reason: 'Verification returned false' },
+        });
         throw new UnauthorizedException('Passkey authentication verification failed');
       }
 
@@ -338,11 +448,22 @@ export class AuthService {
         sessionId: session.id,
       });
 
+      await this.auditService.logEvent({
+        eventType: AuditEventType.PASSKEY_AUTHENTICATION_SUCCEEDED,
+        actorUserId: user.id,
+        targetResourceId: session.id,
+        outcome: AuditOutcome.SUCCESS,
+        ipAddress: metadata?.ipAddress,
+        userAgent: metadata?.userAgent,
+        metadata: { credentialId: credential.credentialId },
+      });
+
       return {
         verified: true,
         user: {
           id: user.id,
           email: user.email,
+          displayName: user.displayName,
           status: user.status,
           emailVerified: !!user.emailVerifiedAt,
           createdAt: user.createdAt.toISOString(),
