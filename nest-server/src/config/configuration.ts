@@ -23,6 +23,11 @@ export default (): AppConfig => {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const cookieSecure =
+    process.env.COOKIE_SECURE !== undefined
+      ? process.env.COOKIE_SECURE === 'true'
+      : isProduction;
+
   return {
     nodeEnv,
     port: parseInt(process.env.PORT ?? String(APP_CONSTANTS.DEFAULT_PORT), 10),
@@ -62,6 +67,29 @@ export default (): AppConfig => {
       ),
       userVerification: (process.env.USER_VERIFICATION as AppConfig['webauthn']['userVerification']) ??
         APP_CONSTANTS.DEFAULT_USER_VERIFICATION,
+    },
+    jwt: {
+      accessSecret: process.env.JWT_ACCESS_SECRET ?? 'dev-jwt-access-secret-min-32-chars-key!',
+      accessTtl: process.env.JWT_ACCESS_TTL ?? APP_CONSTANTS.DEFAULT_JWT_ACCESS_TTL,
+      issuer: process.env.JWT_ISSUER ?? APP_CONSTANTS.DEFAULT_JWT_ISSUER,
+      audience: process.env.JWT_AUDIENCE ?? APP_CONSTANTS.DEFAULT_JWT_AUDIENCE,
+    },
+    session: {
+      refreshTokenTtlDays: parseInt(
+        process.env.REFRESH_TOKEN_TTL_DAYS ?? String(APP_CONSTANTS.DEFAULT_REFRESH_TOKEN_TTL_DAYS),
+        10,
+      ),
+      refreshTokenSecret:
+        process.env.REFRESH_TOKEN_SECRET ?? 'dev-refresh-token-hmac-salt-32-chars!',
+      maxActiveSessions: parseInt(
+        process.env.MAX_ACTIVE_SESSIONS_PER_USER ??
+          String(APP_CONSTANTS.DEFAULT_MAX_ACTIVE_SESSIONS),
+        10,
+      ),
+      cookieName: process.env.COOKIE_NAME ?? APP_CONSTANTS.DEFAULT_COOKIE_NAME,
+      cookieSecure,
+      cookieSameSite: (process.env.COOKIE_SAME_SITE as AppConfig['session']['cookieSameSite']) ??
+        APP_CONSTANTS.DEFAULT_COOKIE_SAME_SITE,
     },
   };
 };
