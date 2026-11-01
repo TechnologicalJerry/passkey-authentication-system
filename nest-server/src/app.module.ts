@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PasskeysModule } from './passkeys/passkeys.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { SessionsModule } from './sessions/sessions.module.js';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -48,10 +49,11 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     // Database connectivity and TypeORM configuration
     DatabaseModule,
 
-    // Core Identity and Passkey Authentication modules
+    // Core Identity, Passkey Authentication, and Session Management modules
     UsersModule,
     PasskeysModule,
     AuthModule,
+    SessionsModule,
 
     // Liveness and readiness health checks
     HealthModule,
