@@ -14,12 +14,22 @@ export const APP_CONSTANTS = {
   DEFAULT_RP_ID: 'localhost',
   DEFAULT_CHALLENGE_TTL_MS: 60000, // 60 seconds
   DEFAULT_USER_VERIFICATION: 'preferred' as const,
+
+  // JWT & Session defaults
+  DEFAULT_JWT_ACCESS_TTL: '15m',
+  DEFAULT_JWT_ISSUER: 'passkey-auth-api',
+  DEFAULT_JWT_AUDIENCE: 'passkey-auth-app',
+  DEFAULT_REFRESH_TOKEN_TTL_DAYS: 7,
+  DEFAULT_MAX_ACTIVE_SESSIONS: 5,
+  DEFAULT_COOKIE_NAME: 'refresh_token',
+  DEFAULT_COOKIE_SAME_SITE: 'lax' as const,
 } as const;
 
 export const SENSITIVE_LOG_KEYS = [
   'req.headers.authorization',
   'req.headers.cookie',
   'req.headers["set-cookie"]',
+  'req.cookies.refresh_token',
   'body.password',
   'body.secret',
   'body.token',
@@ -36,6 +46,8 @@ export const SENSITIVE_LOG_KEYS = [
   'body.response.authenticatorData',
   'body.response.signature',
   'body.response.userHandle',
+  'tokens.accessToken',
+  'tokens.refreshToken',
   '*.password',
   '*.secret',
   '*.token',
