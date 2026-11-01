@@ -22,5 +22,12 @@ export class RegistrationOptionsDto {
   @IsString({ message: 'Display name must be a string' })
   @MaxLength(64, { message: 'Display name cannot exceed 64 characters' })
   displayName?: string;
-}
 
+  @ApiPropertyOptional({
+    example: 'd9b3a4f6e1...',
+    description: 'Single-use invitation token (required when ENROLLMENT_INVITATION_REQUIRED=true)',
+  })
+  @IsOptional()
+  @IsString({ message: 'Invitation token must be a string' })
+  invitationToken?: string;
+}
