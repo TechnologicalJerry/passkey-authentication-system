@@ -91,5 +91,11 @@ export default (): AppConfig => {
       cookieSameSite: (process.env.COOKIE_SAME_SITE as AppConfig['session']['cookieSameSite']) ??
         APP_CONSTANTS.DEFAULT_COOKIE_SAME_SITE,
     },
+    enrollment: {
+      invitationRequired: process.env.ENROLLMENT_INVITATION_REQUIRED === 'true',
+    },
+    security: {
+      trustProxy: process.env.TRUST_PROXY !== 'false',
+    },
   };
 };
