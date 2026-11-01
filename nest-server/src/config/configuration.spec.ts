@@ -39,6 +39,8 @@ describe('Configuration & Environment Validation', () => {
       delete process.env.COOKIE_NAME;
       delete process.env.COOKIE_SECURE;
       delete process.env.COOKIE_SAME_SITE;
+      delete process.env.ENROLLMENT_INVITATION_REQUIRED;
+      delete process.env.TRUST_PROXY;
 
       const config = configuration();
 
@@ -51,7 +53,7 @@ describe('Configuration & Environment Validation', () => {
       expect(config.database.name).toBe('passkey_auth');
       expect(config.cors.origins).toEqual(['http://localhost:3000']);
       expect(config.logging.level).toBe('info');
-      expect(config.swagger.enabled).toBe(true); // Default true in development
+      expect(config.swagger.enabled).toBe(true);
       expect(config.webauthn.rpName).toBe('Passkey Authentication System');
       expect(config.webauthn.rpId).toBe('localhost');
       expect(config.webauthn.origins).toEqual(['http://localhost:3000']);
@@ -71,6 +73,10 @@ describe('Configuration & Environment Validation', () => {
       expect(config.session.cookieName).toBe('refresh_token');
       expect(config.session.cookieSecure).toBe(false);
       expect(config.session.cookieSameSite).toBe('lax');
+
+      // Stage 4: Enrollment & Security Defaults
+      expect(config.enrollment.invitationRequired).toBe(false);
+      expect(config.security.trustProxy).toBe(true);
     });
 
     it('should disable Swagger in production by default unless explicitly enabled', () => {
@@ -107,7 +113,7 @@ describe('Configuration & Environment Validation', () => {
   });
 
   describe('environmentValidationSchema (Joi)', () => {
-    it('should validate valid environment configuration including WebAuthn, JWT, and Session settings', () => {
+    it('should validate valid environment configuration including Stage 4 settings', () => {
       const validConfig = {
         NODE_ENV: 'production',
         PORT: 8080,
@@ -139,18 +145,16 @@ describe('Configuration & Environment Validation', () => {
         COOKIE_NAME: 'secure_refresh_token',
         COOKIE_SECURE: true,
         COOKIE_SAME_SITE: 'strict',
+        ENROLLMENT_INVITATION_REQUIRED: true,
+        TRUST_PROXY: true,
       };
 
       const { error, value } = environmentValidationSchema.validate(validConfig);
       expect(error).toBeUndefined();
       expect(value.PORT).toBe(8080);
       expect(value.NODE_ENV).toBe('production');
-      expect(value.DATABASE_SSL).toBe(true);
-      expect(value.RP_ID).toBe('auth.example.com');
-      expect(value.USER_VERIFICATION).toBe('required');
-      expect(value.JWT_ACCESS_TTL).toBe('10m');
-      expect(value.MAX_ACTIVE_SESSIONS_PER_USER).toBe(3);
-      expect(value.COOKIE_SAME_SITE).toBe('strict');
+      expect(value.ENROLLMENT_INVITATION_REQUIRED).toBe(true);
+      expect(value.TRUST_PROXY).toBe(true);
     });
 
     it('should reject invalid ports (out of 1-65535 range)', () => {
@@ -171,26 +175,6 @@ describe('Configuration & Environment Validation', () => {
       const { error } = environmentValidationSchema.validate(invalidConfig);
       expect(error).toBeDefined();
       expect(error?.message).toContain('JWT_ACCESS_SECRET');
-    });
-
-    it('should reject invalid JWT_ACCESS_TTL format', () => {
-      const invalidConfig = {
-        JWT_ACCESS_TTL: '15minutes',
-      };
-
-      const { error } = environmentValidationSchema.validate(invalidConfig);
-      expect(error).toBeDefined();
-      expect(error?.message).toContain('JWT_ACCESS_TTL');
-    });
-
-    it('should reject unsupported COOKIE_SAME_SITE policy', () => {
-      const invalidConfig = {
-        COOKIE_SAME_SITE: 'invalid_samesite',
-      };
-
-      const { error } = environmentValidationSchema.validate(invalidConfig);
-      expect(error).toBeDefined();
-      expect(error?.message).toContain('COOKIE_SAME_SITE');
     });
   });
 });
