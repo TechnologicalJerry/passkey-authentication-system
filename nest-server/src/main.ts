@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule, ObserveInstrument } from './app.module.js';
 
 async function bootstrap() {
@@ -24,7 +25,10 @@ async function bootstrap() {
   // Security headers with Helmet
   app.use(helmet());
 
-  // CORS configuration with explicit allowlist
+  // Parse HTTP cookies for secure refresh-token delivery
+  app.use(cookieParser());
+
+  // CORS configuration with explicit allowlist and credentials enabled
   const isProduction = configService.get<string>('nodeEnv') === 'production';
   const allowedOrigins = configService.get<string[]>('cors.origins') ?? ['http://localhost:3000'];
 
@@ -87,6 +91,7 @@ async function bootstrap() {
         'bearer',
       )
       .addTag('Passkey Authentication', 'WebAuthn passkey registration and authentication ceremonies')
+      .addTag('Sessions & Tokens', 'Session lifecycle, refresh token rotation, and logout')
       .addTag('Health', 'System liveness and dependency readiness probes')
       .addTag('Root', 'Core service information and root endpoints')
       .build();
