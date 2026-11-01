@@ -1,11 +1,21 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { RegistrationOptionsDto } from './dto/registration-options.dto.js';
 import { RegistrationVerifyDto } from './dto/registration-verify.dto.js';
 import { AuthenticationOptionsDto } from './dto/authentication-options.dto.js';
 import { AuthenticationVerifyDto } from './dto/authentication-verify.dto.js';
-import type { AuthSuccessResult } from '../common/types/index.js';
+import type { AppConfig, AuthSuccessResult } from '../common/types/index.js';
 import type {
   RegistrationOptionsResult,
   AuthenticationOptionsResult,
@@ -17,7 +27,14 @@ import type {
   version: '1',
 })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private get sessionConfig(): AppConfig['session'] {
+    return this.configService.getOrThrow<AppConfig['session']>('session');
+  }
 
   @Post('registration/options')
   @HttpCode(HttpStatus.OK)
@@ -89,13 +106,13 @@ export class AuthController {
   @Post('authentication/verify')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Verify passkey authentication assertion',
+    summary: 'Verify passkey authentication assertion and establish session',
     description:
-      'Cryptographically verifies the WebAuthn assertion signature, checks signature counters to prevent cloned credentials, and establishes user identity.',
+      'Cryptographically verifies the WebAuthn assertion signature, creates an authenticated session, issues access and refresh tokens, and sets secure HttpOnly cookie.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Passkey assertion verified successfully',
+    description: 'Passkey assertion verified successfully and session established with tokens',
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -107,8 +124,28 @@ export class AuthController {
   })
   async verifyAuthentication(
     @Body() dto: AuthenticationVerifyDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthSuccessResult> {
-    return this.authService.verifyAuthentication(dto);
+    const ipAddress = req.ip ?? null;
+    const userAgent = req.headers['user-agent'] ?? null;
+
+    const result = await this.authService.verifyAuthentication(dto, {
+      ipAddress,
+      userAgent,
+    });
+
+    if (result.tokens) {
+      const maxAgeMs = this.sessionConfig.refreshTokenTtlDays * 86400 * 1000;
+      res.cookie(this.sessionConfig.cookieName, result.tokens.refreshToken, {
+        httpOnly: true,
+        secure: this.sessionConfig.cookieSecure,
+        sameSite: this.sessionConfig.cookieSameSite,
+        path: '/api/v1/auth',
+        maxAge: maxAgeMs,
+      });
+    }
+
+    return result;
   }
 }
-
