@@ -24,6 +24,8 @@ import { PasskeysService } from '../passkeys/passkeys.service.js';
 import { PasskeyCredential } from '../passkeys/entities/passkey-credential.entity.js';
 import { ChallengeService } from './challenge.service.js';
 import { ChallengeCeremony } from './entities/auth-challenge.entity.js';
+import { TokenService } from './token.service.js';
+import { SessionsService } from '../sessions/sessions.service.js';
 import { RegistrationOptionsDto } from './dto/registration-options.dto.js';
 import { RegistrationVerifyDto } from './dto/registration-verify.dto.js';
 import { AuthenticationOptionsDto } from './dto/authentication-options.dto.js';
@@ -50,6 +52,8 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly passkeysService: PasskeysService,
     private readonly challengeService: ChallengeService,
+    private readonly sessionsService: SessionsService,
+    private readonly tokenService: TokenService,
   ) {}
 
   private get webauthnConfig(): AppConfig['webauthn'] {
@@ -258,9 +262,13 @@ export class AuthService {
   }
 
   /**
-   * Cryptographically verifies the authenticator assertion signature and updates usage metadata.
+   * Cryptographically verifies the authenticator assertion signature, updates usage metadata,
+   * creates an authenticated session, and issues access and refresh tokens.
    */
-  async verifyAuthentication(dto: AuthenticationVerifyDto): Promise<AuthSuccessResult> {
+  async verifyAuthentication(
+    dto: AuthenticationVerifyDto,
+    metadata?: { ipAddress?: string | null; userAgent?: string | null },
+  ): Promise<AuthSuccessResult> {
     return this.dataSource.transaction(async (entityManager) => {
       // 1. Atomically consume the authentication challenge
       const challenge = await this.challengeService.consumeChallenge(
@@ -315,6 +323,21 @@ export class AuthService {
         entityManager.getRepository(PasskeyCredential),
       );
 
+      // 6. Stage 3: Atomically create authenticated session and enforce active session limits
+      const { session, rawRefreshToken } = await this.sessionsService.createSession({
+        userId: user.id,
+        ipAddress: metadata?.ipAddress,
+        userAgent: metadata?.userAgent,
+        entityManager,
+      });
+
+      // 7. Stage 3: Generate short-lived JWT access token
+      const accessTokenResult = await this.tokenService.generateAccessToken({
+        userId: user.id,
+        email: user.email,
+        sessionId: session.id,
+      });
+
       return {
         verified: true,
         user: {
@@ -324,8 +347,13 @@ export class AuthService {
           emailVerified: !!user.emailVerifiedAt,
           createdAt: user.createdAt.toISOString(),
         },
+        tokens: {
+          accessToken: accessTokenResult.token,
+          refreshToken: rawRefreshToken,
+          expiresIn: accessTokenResult.expiresIn,
+          tokenType: 'Bearer',
+        },
       };
     });
   }
 }
-
