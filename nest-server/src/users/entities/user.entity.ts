@@ -26,6 +26,9 @@ export class User {
   @Column({ type: 'varchar', length: 255, unique: true })
   email!: string;
 
+  @Column({ type: 'varchar', length: 128, nullable: true })
+  displayName!: string | null;
+
   @Index('idx_users_status')
   @Column({
     type: 'enum',
