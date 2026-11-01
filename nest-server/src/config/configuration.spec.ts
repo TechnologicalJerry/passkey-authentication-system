@@ -29,6 +29,16 @@ describe('Configuration & Environment Validation', () => {
       delete process.env.RP_ORIGIN;
       delete process.env.CHALLENGE_TTL_MS;
       delete process.env.USER_VERIFICATION;
+      delete process.env.JWT_ACCESS_SECRET;
+      delete process.env.JWT_ACCESS_TTL;
+      delete process.env.JWT_ISSUER;
+      delete process.env.JWT_AUDIENCE;
+      delete process.env.REFRESH_TOKEN_TTL_DAYS;
+      delete process.env.REFRESH_TOKEN_SECRET;
+      delete process.env.MAX_ACTIVE_SESSIONS_PER_USER;
+      delete process.env.COOKIE_NAME;
+      delete process.env.COOKIE_SECURE;
+      delete process.env.COOKIE_SAME_SITE;
 
       const config = configuration();
 
@@ -47,6 +57,20 @@ describe('Configuration & Environment Validation', () => {
       expect(config.webauthn.origins).toEqual(['http://localhost:3000']);
       expect(config.webauthn.challengeTtlMs).toBe(60000);
       expect(config.webauthn.userVerification).toBe('preferred');
+
+      // Stage 3: JWT Defaults
+      expect(config.jwt.accessSecret).toBe('dev-jwt-access-secret-min-32-chars-key!');
+      expect(config.jwt.accessTtl).toBe('15m');
+      expect(config.jwt.issuer).toBe('passkey-auth-api');
+      expect(config.jwt.audience).toBe('passkey-auth-app');
+
+      // Stage 3: Session Defaults
+      expect(config.session.refreshTokenTtlDays).toBe(7);
+      expect(config.session.refreshTokenSecret).toBe('dev-refresh-token-hmac-salt-32-chars!');
+      expect(config.session.maxActiveSessions).toBe(5);
+      expect(config.session.cookieName).toBe('refresh_token');
+      expect(config.session.cookieSecure).toBe(false);
+      expect(config.session.cookieSameSite).toBe('lax');
     });
 
     it('should disable Swagger in production by default unless explicitly enabled', () => {
@@ -59,6 +83,14 @@ describe('Configuration & Environment Validation', () => {
       process.env.SWAGGER_ENABLED = 'true';
       config = configuration();
       expect(config.swagger.enabled).toBe(true);
+    });
+
+    it('should default cookieSecure to true in production if not explicitly set', () => {
+      process.env.NODE_ENV = 'production';
+      delete process.env.COOKIE_SECURE;
+
+      const config = configuration();
+      expect(config.session.cookieSecure).toBe(true);
     });
 
     it('should parse comma-separated CORS and WebAuthn origins and trim whitespace', () => {
@@ -75,7 +107,7 @@ describe('Configuration & Environment Validation', () => {
   });
 
   describe('environmentValidationSchema (Joi)', () => {
-    it('should validate valid environment configuration including WebAuthn settings', () => {
+    it('should validate valid environment configuration including WebAuthn, JWT, and Session settings', () => {
       const validConfig = {
         NODE_ENV: 'production',
         PORT: 8080,
@@ -97,6 +129,16 @@ describe('Configuration & Environment Validation', () => {
         RP_ORIGIN: 'https://app.example.com',
         CHALLENGE_TTL_MS: 30000,
         USER_VERIFICATION: 'required',
+        JWT_ACCESS_SECRET: 'super-secure-production-jwt-access-secret-32-chars!',
+        JWT_ACCESS_TTL: '10m',
+        JWT_ISSUER: 'auth.production.com',
+        JWT_AUDIENCE: 'app.production.com',
+        REFRESH_TOKEN_TTL_DAYS: 14,
+        REFRESH_TOKEN_SECRET: 'super-secure-production-refresh-secret-32-chars!',
+        MAX_ACTIVE_SESSIONS_PER_USER: 3,
+        COOKIE_NAME: 'secure_refresh_token',
+        COOKIE_SECURE: true,
+        COOKIE_SAME_SITE: 'strict',
       };
 
       const { error, value } = environmentValidationSchema.validate(validConfig);
@@ -106,6 +148,9 @@ describe('Configuration & Environment Validation', () => {
       expect(value.DATABASE_SSL).toBe(true);
       expect(value.RP_ID).toBe('auth.example.com');
       expect(value.USER_VERIFICATION).toBe('required');
+      expect(value.JWT_ACCESS_TTL).toBe('10m');
+      expect(value.MAX_ACTIVE_SESSIONS_PER_USER).toBe(3);
+      expect(value.COOKIE_SAME_SITE).toBe('strict');
     });
 
     it('should reject invalid ports (out of 1-65535 range)', () => {
@@ -118,14 +163,34 @@ describe('Configuration & Environment Validation', () => {
       expect(error?.message).toContain('PORT');
     });
 
-    it('should reject unsupported USER_VERIFICATION policy', () => {
+    it('should reject JWT_ACCESS_SECRET shorter than 32 characters', () => {
       const invalidConfig = {
-        USER_VERIFICATION: 'invalid_policy',
+        JWT_ACCESS_SECRET: 'too-short-secret',
       };
 
       const { error } = environmentValidationSchema.validate(invalidConfig);
       expect(error).toBeDefined();
-      expect(error?.message).toContain('USER_VERIFICATION');
+      expect(error?.message).toContain('JWT_ACCESS_SECRET');
+    });
+
+    it('should reject invalid JWT_ACCESS_TTL format', () => {
+      const invalidConfig = {
+        JWT_ACCESS_TTL: '15minutes',
+      };
+
+      const { error } = environmentValidationSchema.validate(invalidConfig);
+      expect(error).toBeDefined();
+      expect(error?.message).toContain('JWT_ACCESS_TTL');
+    });
+
+    it('should reject unsupported COOKIE_SAME_SITE policy', () => {
+      const invalidConfig = {
+        COOKIE_SAME_SITE: 'invalid_samesite',
+      };
+
+      const { error } = environmentValidationSchema.validate(invalidConfig);
+      expect(error).toBeDefined();
+      expect(error?.message).toContain('COOKIE_SAME_SITE');
     });
   });
 });
