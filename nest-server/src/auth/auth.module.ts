@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { UsersModule } from '../users/users.module.js';
@@ -13,12 +13,12 @@ import { AuthController } from './auth.controller.js';
   imports: [
     TypeOrmModule.forFeature([AuthChallenge]),
     ConfigModule,
-    UsersModule,
-    PasskeysModule,
-    SessionsModule,
+    forwardRef(() => UsersModule),
+    forwardRef(() => PasskeysModule),
+    forwardRef(() => SessionsModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, ChallengeService],
   exports: [AuthService, ChallengeService],
 })
-export class AuthModule { }
+export class AuthModule {}
