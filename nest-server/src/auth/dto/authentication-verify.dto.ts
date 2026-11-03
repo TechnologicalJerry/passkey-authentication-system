@@ -9,7 +9,6 @@ import {
   IsUUID,
   ValidateNested,
 } from 'class-validator';
-import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 
 export class AuthenticatorAssertionResponseDto {
   @ApiProperty({ description: 'Base64URL encoded client data JSON' })
@@ -27,13 +26,15 @@ export class AuthenticatorAssertionResponseDto {
   @IsNotEmpty()
   signature!: string;
 
-  @ApiPropertyOptional({ description: 'Base64URL encoded user handle (user ID)' })
+  @ApiPropertyOptional({
+    description: 'Base64URL encoded user handle (user ID)',
+  })
   @IsOptional()
   @IsString()
   userHandle?: string;
 }
 
-export class WebAuthnAuthenticationResponseDto implements AuthenticationResponseJSON {
+export class WebAuthnAuthenticationResponseDto {
   @ApiProperty({ description: 'Base64URL encoded credential ID' })
   @IsString()
   @IsNotEmpty()
@@ -50,7 +51,10 @@ export class WebAuthnAuthenticationResponseDto implements AuthenticationResponse
   @Type(() => AuthenticatorAssertionResponseDto)
   response!: AuthenticatorAssertionResponseDto;
 
-  @ApiPropertyOptional({ description: 'Authenticator attachment modality', example: 'platform' })
+  @ApiPropertyOptional({
+    description: 'Authenticator attachment modality',
+    example: 'platform',
+  })
   @IsOptional()
   @IsString()
   authenticatorAttachment?: 'cross-platform' | 'platform';
@@ -83,4 +87,3 @@ export class AuthenticationVerifyDto {
   @Type(() => WebAuthnAuthenticationResponseDto)
   response!: WebAuthnAuthenticationResponseDto;
 }
-
