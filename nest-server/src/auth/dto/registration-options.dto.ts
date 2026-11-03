@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class RegistrationOptionsDto {
   @ApiProperty({
@@ -25,7 +31,8 @@ export class RegistrationOptionsDto {
 
   @ApiPropertyOptional({
     example: 'd9b3a4f6e1...',
-    description: 'Single-use invitation token (required when ENROLLMENT_INVITATION_REQUIRED=true)',
+    description:
+      'Single-use invitation token (required when ENROLLMENT_INVITATION_REQUIRED=true)',
   })
   @IsOptional()
   @IsString({ message: 'Invitation token must be a string' })
