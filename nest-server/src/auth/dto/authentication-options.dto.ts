@@ -15,4 +15,3 @@ export class AuthenticationOptionsDto {
   )
   email?: string;
 }
-
