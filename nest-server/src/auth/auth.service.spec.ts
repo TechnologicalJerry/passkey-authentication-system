@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ConflictException, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { DataSource } from 'typeorm';
 import { AuthService } from './auth.service.js';
-import { User, UserStatus } from '../users/entities/user.entity.js';
+import { UserStatus } from '../users/entities/user.entity.js';
 import { ChallengeCeremony } from './entities/auth-challenge.entity.js';
 import { PasskeyCredential } from '../passkeys/entities/passkey-credential.entity.js';
 import * as simplewebauthn from '@simplewebauthn/server';
@@ -13,7 +17,11 @@ vi.mock('@simplewebauthn/server', () => ({
   generateRegistrationOptions: vi.fn().mockResolvedValue({
     challenge: 'mock-reg-challenge',
     rp: { name: 'Passkey Authentication System', id: 'localhost' },
-    user: { id: 'user-uuid', name: 'test@example.com', displayName: 'test@example.com' },
+    user: {
+      id: 'user-uuid',
+      name: 'test@example.com',
+      displayName: 'test@example.com',
+    },
     pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
     timeout: 60000,
     attestation: 'none',
@@ -164,7 +172,10 @@ describe('AuthService', () => {
         displayName: 'New User',
       });
 
-      expect(mockUsersService.createPendingUser).toHaveBeenCalledWith('newuser@example.com', 'New User');
+      expect(mockUsersService.createPendingUser).toHaveBeenCalledWith(
+        'newuser@example.com',
+        'New User',
+      );
       expect(result.challengeId).toBe('challenge-uuid');
       expect(result.options.challenge).toBe('mock-reg-challenge');
     });
@@ -207,7 +218,9 @@ describe('AuthService', () => {
       mockEnrollmentService.isInvitationRequired.mockReturnValue(true);
 
       await expect(
-        authService.generateRegistrationOptions({ email: 'newuser@example.com' }),
+        authService.generateRegistrationOptions({
+          email: 'newuser@example.com',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -217,14 +230,16 @@ describe('AuthService', () => {
       const result = await authService.generateAuthenticationOptions({});
 
       expect(result.challengeId).toBe('challenge-uuid');
-      expect(result.options.challenge).toBe('mock-reg-challenge');
+      expect(result.options.challenge).toBe('mock-auth-challenge');
     });
 
     it('should throw BadRequestException if specific email is requested but user is not found', async () => {
       mockUsersService.findByEmail.mockResolvedValue(null);
 
       await expect(
-        authService.generateAuthenticationOptions({ email: 'unknown@example.com' }),
+        authService.generateAuthenticationOptions({
+          email: 'unknown@example.com',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -314,7 +329,9 @@ describe('AuthService', () => {
       expect(result.verified).toBe(true);
       expect(result.tokens).toBeDefined();
       expect(result.tokens?.accessToken).toBe('signed.jwt.access.token');
-      expect(result.tokens?.refreshToken).toBe('raw-refresh-token-hex-32-bytes');
+      expect(result.tokens?.refreshToken).toBe(
+        'raw-refresh-token-hex-32-bytes',
+      );
       expect(result.tokens?.expiresIn).toBe(900);
       expect(result.tokens?.tokenType).toBe('Bearer');
       expect(mockSessionsService.createSession).toHaveBeenCalledWith(
