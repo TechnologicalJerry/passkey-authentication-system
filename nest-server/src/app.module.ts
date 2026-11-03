@@ -26,10 +26,15 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      validationSchema: environmentValidationSchema,
-      validationOptions: {
-        allowUnknown: true,
-        abortEarly: false,
+      validate: (config: Record<string, unknown>) => {
+        const { error, value } = environmentValidationSchema.validate(config, {
+          abortEarly: false,
+          allowUnknown: true,
+        });
+        if (error) {
+          throw new Error(`Environment validation error: ${error.message}`);
+        }
+        return value;
       },
     }),
 
