@@ -108,7 +108,9 @@ export class AuditService {
     ];
 
     for (const key of Object.keys(copy)) {
-      if (forbiddenKeys.some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
+      if (
+        forbiddenKeys.some((k) => key.toLowerCase().includes(k.toLowerCase()))
+      ) {
         copy[key] = '[REDACTED]';
       }
     }
@@ -116,4 +118,3 @@ export class AuditService {
     return copy;
   }
 }
-
