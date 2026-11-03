@@ -12,7 +12,6 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
-import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 
 export class AuthenticatorAttestationResponseDto {
   @ApiProperty({ description: 'Base64URL encoded client data JSON' })
@@ -26,7 +25,8 @@ export class AuthenticatorAttestationResponseDto {
   attestationObject!: string;
 
   @ApiPropertyOptional({
-    description: 'Array of authenticator transports supported by the credential',
+    description:
+      'Array of authenticator transports supported by the credential',
     type: [String],
     example: ['internal', 'hybrid'],
   })
@@ -51,7 +51,7 @@ export class AuthenticatorAttestationResponseDto {
   publicKey?: string;
 }
 
-export class WebAuthnRegistrationResponseDto implements RegistrationResponseJSON {
+export class WebAuthnRegistrationResponseDto {
   @ApiProperty({ description: 'Base64URL encoded credential ID' })
   @IsString()
   @IsNotEmpty()
@@ -68,7 +68,10 @@ export class WebAuthnRegistrationResponseDto implements RegistrationResponseJSON
   @Type(() => AuthenticatorAttestationResponseDto)
   response!: AuthenticatorAttestationResponseDto;
 
-  @ApiPropertyOptional({ description: 'Authenticator attachment modality', example: 'platform' })
+  @ApiPropertyOptional({
+    description: 'Authenticator attachment modality',
+    example: 'platform',
+  })
   @IsOptional()
   @IsString()
   authenticatorAttachment?: 'cross-platform' | 'platform';
@@ -110,4 +113,3 @@ export class RegistrationVerifyDto {
   @MaxLength(128, { message: 'Label cannot exceed 128 characters' })
   label?: string;
 }
-
