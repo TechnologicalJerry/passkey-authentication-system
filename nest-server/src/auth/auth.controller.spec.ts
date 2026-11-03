@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthController } from './auth.controller.js';
 import type { AuthService } from './auth.service.js';
+import type { ConfigService } from '@nestjs/config';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -9,6 +10,9 @@ describe('AuthController', () => {
     verifyRegistration: ReturnType<typeof vi.fn>;
     generateAuthenticationOptions: ReturnType<typeof vi.fn>;
     verifyAuthentication: ReturnType<typeof vi.fn>;
+  };
+  let mockConfigService: {
+    getOrThrow: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -19,7 +23,19 @@ describe('AuthController', () => {
       verifyAuthentication: vi.fn(),
     };
 
-    controller = new AuthController(mockAuthService as unknown as AuthService);
+    mockConfigService = {
+      getOrThrow: vi.fn().mockReturnValue({
+        refreshTokenTtlDays: 7,
+        cookieName: 'refresh_token',
+        cookieSecure: false,
+        cookieSameSite: 'lax',
+      }),
+    };
+
+    controller = new AuthController(
+      mockAuthService as unknown as AuthService,
+      mockConfigService as unknown as ConfigService,
+    );
   });
 
   it('should delegate getRegistrationOptions to authService', async () => {
@@ -29,7 +45,9 @@ describe('AuthController', () => {
 
     const result = await controller.getRegistrationOptions(dto);
     expect(result).toBe(expected);
-    expect(mockAuthService.generateRegistrationOptions).toHaveBeenCalledWith(dto);
+    expect(mockAuthService.generateRegistrationOptions).toHaveBeenCalledWith(
+      dto,
+    );
   });
 
   it('should delegate verifyRegistration to authService', async () => {
@@ -49,7 +67,9 @@ describe('AuthController', () => {
 
     const result = await controller.getAuthenticationOptions(dto);
     expect(result).toBe(expected);
-    expect(mockAuthService.generateAuthenticationOptions).toHaveBeenCalledWith(dto);
+    expect(mockAuthService.generateAuthenticationOptions).toHaveBeenCalledWith(
+      dto,
+    );
   });
 
   it('should delegate verifyAuthentication to authService', async () => {
@@ -57,9 +77,21 @@ describe('AuthController', () => {
     const expected = { verified: true, user: {} as any };
     mockAuthService.verifyAuthentication.mockResolvedValue(expected);
 
-    const result = await controller.verifyAuthentication(dto);
+    const mockReq = {
+      ip: '127.0.0.1',
+      headers: { 'user-agent': 'test-agent' },
+    };
+    const mockRes = { cookie: vi.fn() };
+
+    const result = await controller.verifyAuthentication(
+      dto,
+      mockReq as any,
+      mockRes as any,
+    );
     expect(result).toBe(expected);
-    expect(mockAuthService.verifyAuthentication).toHaveBeenCalledWith(dto);
+    expect(mockAuthService.verifyAuthentication).toHaveBeenCalledWith(dto, {
+      ipAddress: '127.0.0.1',
+      userAgent: 'test-agent',
+    });
   });
 });
-
