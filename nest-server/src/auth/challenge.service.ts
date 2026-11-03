@@ -1,11 +1,10 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
-import { AuthChallenge, ChallengeCeremony } from './entities/auth-challenge.entity.js';
+import {
+  AuthChallenge,
+  ChallengeCeremony,
+} from './entities/auth-challenge.entity.js';
 
 export interface CreateChallengeParams {
   challenge: string;
@@ -82,7 +81,9 @@ export class ChallengeService {
         throw new BadRequestException('Challenge ceremony mismatch');
       }
       if (existing.consumedAt !== null) {
-        throw new BadRequestException('Authentication challenge has already been used (replay detected)');
+        throw new BadRequestException(
+          'Authentication challenge has already been used (replay detected)',
+        );
       }
       if (existing.expiresAt <= now) {
         throw new BadRequestException('Authentication challenge has expired');
@@ -93,4 +94,3 @@ export class ChallengeService {
     return consumedRecord;
   }
 }
-
