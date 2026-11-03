@@ -33,7 +33,10 @@ export class AuthChallenge {
   @Column({ type: 'uuid', nullable: true })
   userId!: string | null;
 
-  @ManyToOne(() => User, (user) => user.challenges, { nullable: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.challenges, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_id' })
   user!: User | null;
 
@@ -48,4 +51,3 @@ export class AuthChallenge {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
-
