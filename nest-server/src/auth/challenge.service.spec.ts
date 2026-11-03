@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import { ChallengeService } from './challenge.service.js';
-import { AuthChallenge, ChallengeCeremony } from './entities/auth-challenge.entity.js';
+import {
+  AuthChallenge,
+  ChallengeCeremony,
+} from './entities/auth-challenge.entity.js';
 
 describe('ChallengeService', () => {
   let service: ChallengeService;
@@ -16,12 +19,16 @@ describe('ChallengeService', () => {
   beforeEach(() => {
     mockRepository = {
       create: vi.fn((dto) => dto),
-      save: vi.fn((entity) => Promise.resolve({ id: 'mock-challenge-uuid', ...entity })),
+      save: vi.fn((entity) =>
+        Promise.resolve({ id: 'mock-challenge-uuid', ...entity }),
+      ),
       findOne: vi.fn(),
       createQueryBuilder: vi.fn(),
     };
 
-    service = new ChallengeService(mockRepository as unknown as Repository<AuthChallenge>);
+    service = new ChallengeService(
+      mockRepository as unknown as Repository<AuthChallenge>,
+    );
   });
 
   describe('createChallenge', () => {
@@ -65,7 +72,10 @@ describe('ChallengeService', () => {
       };
       mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
-      const result = await service.consumeChallenge('challenge-uuid', ChallengeCeremony.REGISTRATION);
+      const result = await service.consumeChallenge(
+        'challenge-uuid',
+        ChallengeCeremony.REGISTRATION,
+      );
 
       expect(result).toEqual(mockConsumedChallenge);
     });
@@ -83,7 +93,10 @@ describe('ChallengeService', () => {
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.consumeChallenge('non-existent-uuid', ChallengeCeremony.REGISTRATION),
+        service.consumeChallenge(
+          'non-existent-uuid',
+          ChallengeCeremony.REGISTRATION,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -105,7 +118,10 @@ describe('ChallengeService', () => {
       });
 
       await expect(
-        service.consumeChallenge('challenge-uuid', ChallengeCeremony.REGISTRATION),
+        service.consumeChallenge(
+          'challenge-uuid',
+          ChallengeCeremony.REGISTRATION,
+        ),
       ).rejects.toThrow('Challenge ceremony mismatch');
     });
 
@@ -127,7 +143,10 @@ describe('ChallengeService', () => {
       });
 
       await expect(
-        service.consumeChallenge('challenge-uuid', ChallengeCeremony.REGISTRATION),
+        service.consumeChallenge(
+          'challenge-uuid',
+          ChallengeCeremony.REGISTRATION,
+        ),
       ).rejects.toThrow('replay detected');
     });
 
@@ -149,9 +168,11 @@ describe('ChallengeService', () => {
       });
 
       await expect(
-        service.consumeChallenge('challenge-uuid', ChallengeCeremony.REGISTRATION),
+        service.consumeChallenge(
+          'challenge-uuid',
+          ChallengeCeremony.REGISTRATION,
+        ),
       ).rejects.toThrow('expired');
     });
   });
 });
-
