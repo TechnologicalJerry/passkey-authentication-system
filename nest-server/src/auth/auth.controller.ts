@@ -51,7 +51,8 @@ export class AuthController {
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'An account with registered passkeys already exists for this email',
+    description:
+      'An account with registered passkeys already exists for this email',
   })
   async getRegistrationOptions(
     @Body() dto: RegistrationOptionsDto,
@@ -73,7 +74,8 @@ export class AuthController {
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid, expired, or replayed challenge, or verification failed',
+    description:
+      'Invalid, expired, or replayed challenge, or verification failed',
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
@@ -117,7 +119,8 @@ export class AuthController {
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Passkey assertion verified successfully and session established with tokens',
+    description:
+      'Passkey assertion verified successfully and session established with tokens',
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
