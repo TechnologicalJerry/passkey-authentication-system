@@ -68,4 +68,3 @@ export class AuditLog {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
-
