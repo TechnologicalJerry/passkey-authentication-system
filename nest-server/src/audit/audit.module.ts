@@ -10,4 +10,3 @@ import { AuditService } from './audit.service.js';
   exports: [AuditService, TypeOrmModule],
 })
 export class AuditModule {}
-
