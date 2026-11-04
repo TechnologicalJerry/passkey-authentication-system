@@ -22,7 +22,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message: string | object = 'An unexpected error occurred';
     let errorName = 'InternalServerError';
 
-    const requestId = request?.id ?? (request?.headers?.['x-request-id'] as string) ?? undefined;
+    const requestId =
+      request?.id ??
+      (request?.headers?.['x-request-id'] as string) ??
+      undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -30,16 +33,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
         const resObj = exceptionResponse as Record<string, unknown>;
         message = (resObj['message'] as string | object) ?? exception.message;
         errorName = (resObj['error'] as string) ?? exception.name;
       }
     } else if (exception instanceof Error) {
       // Check for PostgreSQL unique constraint violation (code 23505)
-      if ((exception as Record<string, unknown>)?.['code'] === '23505') {
+      if (
+        (exception as unknown as Record<string, unknown>)?.['code'] === '23505'
+      ) {
         status = HttpStatus.CONFLICT;
-        message = 'A resource with the provided unique identifier already exists';
+        message =
+          'A resource with the provided unique identifier already exists';
         errorName = 'ConflictException';
       } else {
         this.logger.error(
@@ -63,7 +72,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error: errorName,
       message,
       timestamp: new Date().toISOString(),
-      path: request?.url ?? '',
+      path: request?.originalUrl ?? request?.url ?? '',
       ...(requestId ? { requestId } : {}),
     };
 
