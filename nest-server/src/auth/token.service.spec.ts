@@ -127,7 +127,9 @@ describe('TokenService', () => {
     });
 
     it('should throw UnauthorizedException when token verification fails or token is expired', async () => {
-      mockJwtService.verifyAsync.mockRejectedValueOnce(new Error('jwt expired'));
+      mockJwtService.verifyAsync.mockRejectedValueOnce(
+        new Error('jwt expired'),
+      );
 
       await expect(service.verifyAccessToken('expired-token')).rejects.toThrow(
         UnauthorizedException,
@@ -140,10 +142,9 @@ describe('TokenService', () => {
         // missing sessionId and jti
       });
 
-      await expect(service.verifyAccessToken('incomplete-token')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.verifyAccessToken('incomplete-token'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
-
