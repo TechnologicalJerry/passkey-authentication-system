@@ -109,10 +109,13 @@ export class CreateIdentityAndPasskeyTables1730400000000 implements MigrationInt
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS "auth_challenges" CASCADE;`);
-    await queryRunner.query(`DROP TABLE IF EXISTS "passkey_credentials" CASCADE;`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS "passkey_credentials" CASCADE;`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS "users" CASCADE;`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "auth_challenges_ceremonytype_enum";`);
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "auth_challenges_ceremonytype_enum";`,
+    );
     await queryRunner.query(`DROP TYPE IF EXISTS "users_status_enum";`);
   }
 }
-
