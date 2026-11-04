@@ -2,7 +2,8 @@ import type { AppConfig } from '../common/types/index.js';
 import { APP_CONSTANTS } from '../common/constants/app.constants.js';
 
 export default (): AppConfig => {
-  const nodeEnv = (process.env.NODE_ENV as AppConfig['nodeEnv']) ?? 'development';
+  const nodeEnv =
+    (process.env.NODE_ENV as AppConfig['nodeEnv']) ?? 'development';
   const isProduction = nodeEnv === 'production';
 
   // In production, swagger is disabled by default unless explicitly set to 'true'.
@@ -17,7 +18,10 @@ export default (): AppConfig => {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  const rawRpOrigins = process.env.RP_ORIGIN ?? process.env.CORS_ORIGINS ?? 'http://localhost:3000';
+  const rawRpOrigins =
+    process.env.RP_ORIGIN ??
+    process.env.CORS_ORIGINS ??
+    'http://localhost:3000';
   const parsedRpOrigins = rawRpOrigins
     .split(',')
     .map((origin) => origin.trim())
@@ -45,7 +49,8 @@ export default (): AppConfig => {
       ssl: process.env.DATABASE_SSL === 'true',
     },
     cors: {
-      origins: parsedOrigins.length > 0 ? parsedOrigins : ['http://localhost:3000'],
+      origins:
+        parsedOrigins.length > 0 ? parsedOrigins : ['http://localhost:3000'],
     },
     logging: {
       level: process.env.LOG_LEVEL ?? 'info',
@@ -54,33 +59,51 @@ export default (): AppConfig => {
       enabled: swaggerEnabled,
     },
     throttler: {
-      ttl: parseInt(process.env.THROTTLE_TTL ?? String(APP_CONSTANTS.DEFAULT_THROTTLE_TTL), 10),
-      limit: parseInt(process.env.THROTTLE_LIMIT ?? String(APP_CONSTANTS.DEFAULT_THROTTLE_LIMIT), 10),
+      ttl: parseInt(
+        process.env.THROTTLE_TTL ?? String(APP_CONSTANTS.DEFAULT_THROTTLE_TTL),
+        10,
+      ),
+      limit: parseInt(
+        process.env.THROTTLE_LIMIT ??
+          String(APP_CONSTANTS.DEFAULT_THROTTLE_LIMIT),
+        10,
+      ),
     },
     webauthn: {
       rpName: process.env.RP_NAME ?? APP_CONSTANTS.DEFAULT_RP_NAME,
       rpId: process.env.RP_ID ?? APP_CONSTANTS.DEFAULT_RP_ID,
-      origins: parsedRpOrigins.length > 0 ? parsedRpOrigins : ['http://localhost:3000'],
+      origins:
+        parsedRpOrigins.length > 0
+          ? parsedRpOrigins
+          : ['http://localhost:3000'],
       challengeTtlMs: parseInt(
-        process.env.CHALLENGE_TTL_MS ?? String(APP_CONSTANTS.DEFAULT_CHALLENGE_TTL_MS),
+        process.env.CHALLENGE_TTL_MS ??
+          String(APP_CONSTANTS.DEFAULT_CHALLENGE_TTL_MS),
         10,
       ),
-      userVerification: (process.env.USER_VERIFICATION as AppConfig['webauthn']['userVerification']) ??
+      userVerification:
+        (process.env
+          .USER_VERIFICATION as AppConfig['webauthn']['userVerification']) ??
         APP_CONSTANTS.DEFAULT_USER_VERIFICATION,
     },
     jwt: {
-      accessSecret: process.env.JWT_ACCESS_SECRET ?? 'dev-jwt-access-secret-min-32-chars-key!',
-      accessTtl: process.env.JWT_ACCESS_TTL ?? APP_CONSTANTS.DEFAULT_JWT_ACCESS_TTL,
+      accessSecret:
+        process.env.JWT_ACCESS_SECRET ??
+        'dev-jwt-access-secret-min-32-chars-key!',
+      accessTtl:
+        process.env.JWT_ACCESS_TTL ?? APP_CONSTANTS.DEFAULT_JWT_ACCESS_TTL,
       issuer: process.env.JWT_ISSUER ?? APP_CONSTANTS.DEFAULT_JWT_ISSUER,
       audience: process.env.JWT_AUDIENCE ?? APP_CONSTANTS.DEFAULT_JWT_AUDIENCE,
     },
     session: {
       refreshTokenTtlDays: parseInt(
-        process.env.REFRESH_TOKEN_TTL_DAYS ?? String(APP_CONSTANTS.DEFAULT_REFRESH_TOKEN_TTL_DAYS),
+        process.env.REFRESH_TOKEN_TTL_DAYS ??
+          String(APP_CONSTANTS.DEFAULT_REFRESH_TOKEN_TTL_DAYS),
         10,
       ),
       refreshTokenSecret:
-        process.env.REFRESH_TOKEN_SECRET ?? 'dev-refresh-token-hmac-salt-32-chars!',
+        process.env.REFRESH_TOKEN_SECRET ??
+        'dev-refresh-token-hmac-salt-32-chars!',
       maxActiveSessions: parseInt(
         process.env.MAX_ACTIVE_SESSIONS_PER_USER ??
           String(APP_CONSTANTS.DEFAULT_MAX_ACTIVE_SESSIONS),
@@ -88,7 +111,9 @@ export default (): AppConfig => {
       ),
       cookieName: process.env.COOKIE_NAME ?? APP_CONSTANTS.DEFAULT_COOKIE_NAME,
       cookieSecure,
-      cookieSameSite: (process.env.COOKIE_SAME_SITE as AppConfig['session']['cookieSameSite']) ??
+      cookieSameSite:
+        (process.env
+          .COOKIE_SAME_SITE as AppConfig['session']['cookieSameSite']) ??
         APP_CONSTANTS.DEFAULT_COOKIE_SAME_SITE,
     },
     enrollment: {
