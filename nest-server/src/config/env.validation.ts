@@ -21,7 +21,9 @@ export const environmentValidationSchema = Joi.object({
 
   DATABASE_NAME: Joi.string().default('passkey_auth'),
 
-  DATABASE_URL: Joi.string().uri({ scheme: [/postgres/, /postgresql/] }).optional(),
+  DATABASE_URL: Joi.string()
+    .uri({ scheme: [/postgres/, /postgresql/] })
+    .optional(),
 
   DATABASE_SSL: Joi.boolean().default(false),
 
@@ -70,15 +72,17 @@ export const environmentValidationSchema = Joi.object({
     .min(32)
     .default('dev-refresh-token-hmac-salt-32-chars!'),
 
-  MAX_ACTIVE_SESSIONS_PER_USER: Joi.number().integer().min(1).max(20).default(5),
+  MAX_ACTIVE_SESSIONS_PER_USER: Joi.number()
+    .integer()
+    .min(1)
+    .max(20)
+    .default(5),
 
   COOKIE_NAME: Joi.string().trim().default('refresh_token'),
 
   COOKIE_SECURE: Joi.boolean().default(false),
 
-  COOKIE_SAME_SITE: Joi.string()
-    .valid('lax', 'strict', 'none')
-    .default('lax'),
+  COOKIE_SAME_SITE: Joi.string().valid('lax', 'strict', 'none').default('lax'),
 
   // Stage 4 Hardening & Enrollment
   ENROLLMENT_INVITATION_REQUIRED: Joi.boolean().default(false),
