@@ -49,7 +49,10 @@ describe('AllExceptionsFilter', () => {
   });
 
   it('should format validation error responses (with object/array message) correctly', () => {
-    const validationErrors = ['username must not be empty', 'email must be an email'];
+    const validationErrors = [
+      'username must not be empty',
+      'email must be an email',
+    ];
     const exception = new HttpException(
       {
         statusCode: HttpStatus.BAD_REQUEST,
@@ -106,4 +109,3 @@ describe('AllExceptionsFilter', () => {
     );
   });
 });
-
