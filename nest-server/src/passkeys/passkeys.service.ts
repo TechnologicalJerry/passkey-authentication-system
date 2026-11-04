@@ -9,7 +9,10 @@ import { IsNull, Repository } from 'typeorm';
 import { PasskeyCredential } from './entities/passkey-credential.entity.js';
 import type { PasskeySummaryDto } from './dto/passkey-summary.dto.js';
 import { AuditService } from '../audit/audit.service.js';
-import { AuditEventType, AuditOutcome } from '../audit/entities/audit-log.entity.js';
+import {
+  AuditEventType,
+  AuditOutcome,
+} from '../audit/entities/audit-log.entity.js';
 
 export interface CreatePasskeyParams {
   userId: string;
@@ -48,7 +51,9 @@ export class PasskeysService {
   /**
    * Finds an active credential by its WebAuthn credential ID.
    */
-  async findByCredentialId(credentialId: string): Promise<PasskeyCredential | null> {
+  async findByCredentialId(
+    credentialId: string,
+  ): Promise<PasskeyCredential | null> {
     return this.credentialRepository.findOne({
       where: {
         credentialId,
@@ -156,7 +161,9 @@ export class PasskeysService {
     });
 
     if (!credential) {
-      throw new NotFoundException('Passkey not found or does not belong to user');
+      throw new NotFoundException(
+        'Passkey not found or does not belong to user',
+      );
     }
 
     credential.label = newLabel;
@@ -192,7 +199,9 @@ export class PasskeysService {
     });
 
     if (!credential) {
-      throw new NotFoundException('Passkey not found or does not belong to user');
+      throw new NotFoundException(
+        'Passkey not found or does not belong to user',
+      );
     }
 
     // Last-Passkey Safeguard: Prevent account lockout
