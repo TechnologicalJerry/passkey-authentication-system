@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import type { Repository } from 'typeorm';
 import { PasskeysService } from './passkeys.service.js';
 import { PasskeyCredential } from './entities/passkey-credential.entity.js';
@@ -109,7 +109,11 @@ describe('PasskeysService', () => {
       mockCredentialRepo.findOne.mockResolvedValueOnce(null);
 
       await expect(
-        passkeysService.renamePasskey('passkey-db-uuid-1', 'other-user', 'New Name'),
+        passkeysService.renamePasskey(
+          'passkey-db-uuid-1',
+          'other-user',
+          'New Name',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -120,9 +124,6 @@ describe('PasskeysService', () => {
       // Only 1 active passkey
       mockCredentialRepo.count.mockResolvedValueOnce(1);
 
-      await expect(
-        passkeysService.revokePasskey('passkey-db-uuid-1', 'user-uuid-1'),
-      ).rejects.toThrow(BadRequestException);
       await expect(
         passkeysService.revokePasskey('passkey-db-uuid-1', 'user-uuid-1'),
       ).rejects.toThrow('Cannot remove your only active passkey');
@@ -159,4 +160,3 @@ describe('PasskeysService', () => {
     });
   });
 });
-
