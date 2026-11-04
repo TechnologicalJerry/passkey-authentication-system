@@ -21,7 +21,9 @@ export class JwtAuthGuard implements CanActivate {
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
-      throw new UnauthorizedException('Authorization header with Bearer token is required');
+      throw new UnauthorizedException(
+        'Authorization header with Bearer token is required',
+      );
     }
 
     // 1. Verify cryptographic JWT signature, claims, issuer, and audience
@@ -57,4 +59,3 @@ export class JwtAuthGuard implements CanActivate {
     return token.trim();
   }
 }
-
