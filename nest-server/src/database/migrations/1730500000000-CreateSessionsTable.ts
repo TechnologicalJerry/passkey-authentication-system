@@ -56,4 +56,3 @@ export class CreateSessionsTable1730500000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "sessions" CASCADE;`);
   }
 }
-
