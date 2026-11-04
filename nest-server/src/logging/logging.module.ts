@@ -9,7 +9,8 @@ import { SENSITIVE_LOG_KEYS } from '../common/constants/app.constants.js';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const isProduction = configService.get<string>('nodeEnv') === 'production';
+        const isProduction =
+          configService.get<string>('nodeEnv') === 'production';
         const logLevel = configService.get<string>('logging.level') ?? 'info';
 
         return {
@@ -55,4 +56,3 @@ import { SENSITIVE_LOG_KEYS } from '../common/constants/app.constants.js';
   exports: [PinoLoggerModule],
 })
 export class LoggingModule {}
-
