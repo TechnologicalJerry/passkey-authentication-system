@@ -33,7 +33,8 @@ async function bootstrap() {
 
   // Request Correlation ID Middleware (X-Request-Id)
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const correlationId = (req.headers['x-request-id'] as string) || crypto.randomUUID();
+    const correlationId =
+      (req.headers['x-request-id'] as string) || crypto.randomUUID();
     (req as Request & { id: string }).id = correlationId;
     res.setHeader('X-Request-Id', correlationId);
     next();
@@ -60,22 +61,38 @@ async function bootstrap() {
 
   // CORS configuration with explicit allowlist and credentials enabled
   const isProduction = configService.get<string>('nodeEnv') === 'production';
-  const allowedOrigins = configService.get<string[]>('cors.origins') ?? ['http://localhost:3000'];
+  const allowedOrigins = configService.get<string[]>('cors.origins') ?? [
+    'http://localhost:3000',
+  ];
 
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       // Allow requests with no origin (e.g., mobile apps, curl, server-to-server)
       if (!origin) {
         return callback(null, true);
       }
-      if (allowedOrigins.includes(origin) || (!isProduction && allowedOrigins.includes('*'))) {
+      if (
+        allowedOrigins.includes(origin) ||
+        (!isProduction && allowedOrigins.includes('*'))
+      ) {
         return callback(null, true);
       }
-      return callback(new Error(`Origin '${origin}' not allowed by CORS policy`));
+      return callback(
+        new Error(`Origin '${origin}' not allowed by CORS policy`),
+      );
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Request-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'X-Request-Id',
+    ],
     exposedHeaders: ['X-Request-Id'],
   });
 
@@ -121,10 +138,22 @@ async function bootstrap() {
         },
         'bearer',
       )
-      .addTag('Passkey Authentication', 'WebAuthn passkey registration and authentication ceremonies')
-      .addTag('Sessions & Tokens', 'Session lifecycle, refresh token rotation, and logout')
-      .addTag('User Account Lifecycle', 'User profile management, account deactivation and deletion')
-      .addTag('Passkey & Credential Management', 'User passkey listing, renaming, and revocation with lockout protection')
+      .addTag(
+        'Passkey Authentication',
+        'WebAuthn passkey registration and authentication ceremonies',
+      )
+      .addTag(
+        'Sessions & Tokens',
+        'Session lifecycle, refresh token rotation, and logout',
+      )
+      .addTag(
+        'User Account Lifecycle',
+        'User profile management, account deactivation and deletion',
+      )
+      .addTag(
+        'Passkey & Credential Management',
+        'User passkey listing, renaming, and revocation with lockout protection',
+      )
       .addTag('Health', 'System liveness and dependency readiness probes')
       .addTag('Root', 'Core service information and root endpoints')
       .build();
@@ -144,7 +173,9 @@ async function bootstrap() {
   const port = configService.get<number>('port') ?? 3000;
   await app.listen(port);
 
-  logger.log(`Application started in '${configService.get<string>('nodeEnv')}' mode on port ${port}`);
+  logger.log(
+    `Application started in '${configService.get<string>('nodeEnv')}' mode on port ${port}`,
+  );
   logger.log(`API Prefix: /${apiPrefix}, Default Version: v${defaultVersion}`);
 }
 
