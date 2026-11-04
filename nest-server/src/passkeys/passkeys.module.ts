@@ -18,4 +18,4 @@ import { AuditModule } from '../audit/audit.module.js';
   providers: [PasskeysService],
   exports: [PasskeysService, TypeOrmModule],
 })
-export class PasskeysModule { }
+export class PasskeysModule {}
