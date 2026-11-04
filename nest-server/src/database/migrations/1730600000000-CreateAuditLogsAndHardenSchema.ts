@@ -66,8 +66,11 @@ export class CreateAuditLogsAndHardenSchema1730600000000 implements MigrationInt
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS "enrollment_invitations";`);
     await queryRunner.query(`DROP TABLE IF EXISTS "audit_logs";`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "public"."audit_logs_outcome_enum";`);
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "display_name";`);
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "public"."audit_logs_outcome_enum";`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "display_name";`,
+    );
   }
 }
-
