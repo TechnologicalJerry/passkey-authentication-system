@@ -28,4 +28,3 @@ export class PasskeySummaryDto {
   @ApiProperty({ example: false })
   isRevoked!: boolean;
 }
-
