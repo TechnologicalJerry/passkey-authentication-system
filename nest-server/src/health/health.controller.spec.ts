@@ -50,7 +50,9 @@ describe('HealthController and HealthService', () => {
     });
 
     it('should throw ServiceUnavailableException (503) when database query fails', async () => {
-      mockDataSource.query.mockRejectedValue(new Error('Connection refused to postgres:5432'));
+      mockDataSource.query.mockRejectedValue(
+        new Error('Connection refused to postgres:5432'),
+      );
 
       await expect(healthController.getReadiness()).rejects.toThrow(
         ServiceUnavailableException,
@@ -70,4 +72,3 @@ describe('HealthController and HealthService', () => {
     });
   });
 });
-
