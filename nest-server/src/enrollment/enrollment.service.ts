@@ -6,7 +6,10 @@ import crypto from 'node:crypto';
 import { EnrollmentInvitation } from './entities/enrollment-invitation.entity.js';
 import { User } from '../users/entities/user.entity.js';
 import { AuditService } from '../audit/audit.service.js';
-import { AuditEventType, AuditOutcome } from '../audit/entities/audit-log.entity.js';
+import {
+  AuditEventType,
+  AuditOutcome,
+} from '../audit/entities/audit-log.entity.js';
 import type { AppConfig } from '../common/types/index.js';
 
 @Injectable()
@@ -21,12 +24,15 @@ export class EnrollmentService {
   ) {}
 
   private get hmacSecret(): string {
-    const sessionConfig = this.configService.getOrThrow<AppConfig['session']>('session');
+    const sessionConfig =
+      this.configService.getOrThrow<AppConfig['session']>('session');
     return sessionConfig.refreshTokenSecret;
   }
 
   isInvitationRequired(): boolean {
-    return this.configService.get<boolean>('enrollment.invitationRequired') ?? false;
+    return (
+      this.configService.get<boolean>('enrollment.invitationRequired') ?? false
+    );
   }
 
   /**
@@ -103,7 +109,10 @@ export class EnrollmentService {
       await this.auditService.logEvent({
         eventType: AuditEventType.ENROLLMENT_INVITATION_CONSUMED,
         outcome: AuditOutcome.FAILURE,
-        metadata: { email: normalizedEmail, reason: 'Invalid or expired token' },
+        metadata: {
+          email: normalizedEmail,
+          reason: 'Invalid or expired token',
+        },
       });
 
       throw new BadRequestException(
@@ -124,4 +133,3 @@ export class EnrollmentService {
     return consumed;
   }
 }
-
