@@ -60,7 +60,9 @@ describe('PasskeysController', () => {
   it('GET / lists user passkeys', async () => {
     const result = await controller.listPasskeys(authUser);
     expect(result).toHaveLength(1);
-    expect(mockPasskeysService.listUserPasskeys).toHaveBeenCalledWith('user-uuid-1');
+    expect(mockPasskeysService.listUserPasskeys).toHaveBeenCalledWith(
+      'user-uuid-1',
+    );
   });
 
   it('PATCH /:id renames passkey', async () => {
@@ -98,4 +100,3 @@ describe('PasskeysController', () => {
     );
   });
 });
-
