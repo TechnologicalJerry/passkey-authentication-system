@@ -27,4 +27,3 @@ export class PaginationQueryDto {
   @Min(0)
   offset: number = 0;
 }
-
