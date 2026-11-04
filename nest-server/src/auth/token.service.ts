@@ -1,8 +1,13 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import type { AppConfig, JwtPayload, TokenPair } from '../common/types/index.js';
+import {
+  createHmac,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
+import type { AppConfig, JwtPayload } from '../common/types/index.js';
 
 @Injectable()
 export class TokenService {
@@ -78,7 +83,10 @@ export class TokenService {
     if (hashA.length !== hashB.length) {
       return false;
     }
-    return timingSafeEqual(Buffer.from(hashA, 'hex'), Buffer.from(hashB, 'hex'));
+    return timingSafeEqual(
+      Buffer.from(hashA, 'hex'),
+      Buffer.from(hashB, 'hex'),
+    );
   }
 
   /**
@@ -94,7 +102,9 @@ export class TokenService {
       });
 
       if (!payload.sub || !payload.sessionId || !payload.jti) {
-        throw new UnauthorizedException('Access token missing required security claims');
+        throw new UnauthorizedException(
+          'Access token missing required security claims',
+        );
       }
 
       return payload;
@@ -133,4 +143,3 @@ export class TokenService {
     }
   }
 }
-
