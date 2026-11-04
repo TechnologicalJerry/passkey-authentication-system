@@ -15,7 +15,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         const password = configService.get<string>('database.password');
         const database = configService.get<string>('database.name');
         const ssl = configService.get<boolean>('database.ssl');
-        const isDevelopment = configService.get<string>('nodeEnv') === 'development';
+        const isDevelopment =
+          configService.get<string>('nodeEnv') === 'development';
 
         return {
           type: 'postgres',
@@ -40,4 +41,3 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   exports: [TypeOrmModule],
 })
 export class DatabaseModule {}
-
