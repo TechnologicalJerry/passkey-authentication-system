@@ -9,6 +9,8 @@ import {
   Patch,
   Post,
   UseGuards,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -36,6 +38,7 @@ import type { AuthenticatedUser } from '../common/types/index.js';
 export class PasskeysController {
   constructor(
     private readonly passkeysService: PasskeysService,
+    @Inject(forwardRef(() => AuthService))
     private readonly authService: AuthService,
   ) {}
 
@@ -46,8 +49,13 @@ export class PasskeysController {
       'Returns all registered passkeys for the authenticated user with safe metadata (no private or public key bytes).',
   })
   @ApiResponse({ status: HttpStatus.OK, type: [PasskeySummaryDto] })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
-  async listPasskeys(@CurrentUser() user: AuthenticatedUser): Promise<PasskeySummaryDto[]> {
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required',
+  })
+  async listPasskeys(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PasskeySummaryDto[]> {
     return this.passkeysService.listUserPasskeys(user.id);
   }
 
@@ -55,12 +63,18 @@ export class PasskeysController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Generate registration options for adding a new passkey to current account',
+    summary:
+      'Generate registration options for adding a new passkey to current account',
     description:
       'Generates WebAuthn registration options bound to the authenticated user identity with existing credentials excluded.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Registration options for new passkey enrollment' })
-  async generateAdditionalPasskeyOptions(@CurrentUser() user: AuthenticatedUser) {
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Registration options for new passkey enrollment',
+  })
+  async generateAdditionalPasskeyOptions(
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.authService.generateRegistrationOptions(
       { email: user.email },
       user.id,
@@ -70,10 +84,14 @@ export class PasskeysController {
   @Patch(':id')
   @ApiOperation({
     summary: 'Rename passkey device label',
-    description: 'Updates the user-defined device label of a specific registered passkey.',
+    description:
+      'Updates the user-defined device label of a specific registered passkey.',
   })
   @ApiResponse({ status: HttpStatus.OK, type: PasskeySummaryDto })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Passkey not found or not owned by user' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Passkey not found or not owned by user',
+  })
   async renamePasskey(
     @Param() param: UUIDParamDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -90,12 +108,18 @@ export class PasskeysController {
     description:
       'Revokes a passkey credential. Rejects deletion if it is the only active passkey to prevent lockout.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Passkey revoked successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Passkey revoked successfully',
+  })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Cannot delete the only active passkey on account',
   })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Passkey not found or not owned by user' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Passkey not found or not owned by user',
+  })
   async revokePasskey(
     @Param() param: UUIDParamDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -107,4 +131,3 @@ export class PasskeysController {
     };
   }
 }
-
