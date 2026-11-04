@@ -1,4 +1,8 @@
-import { Injectable, ServiceUnavailableException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  ServiceUnavailableException,
+  Logger,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { HealthCheckResult } from '../common/types/index.js';
@@ -35,7 +39,8 @@ export class HealthService {
         },
       };
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown database error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown database error';
       this.logger.error(`Database readiness check failed: ${errorMessage}`);
 
       // Never expose credentials, connection strings, or query specifics to the caller
@@ -50,4 +55,3 @@ export class HealthService {
     }
   }
 }
-
