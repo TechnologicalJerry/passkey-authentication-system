@@ -10,4 +10,3 @@ import { EnrollmentService } from './enrollment.service.js';
   exports: [EnrollmentService, TypeOrmModule],
 })
 export class EnrollmentModule {}
-
