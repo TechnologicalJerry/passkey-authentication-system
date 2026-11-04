@@ -23,7 +23,11 @@ describe('EnrollmentService', () => {
 
   beforeEach(() => {
     mockInvitationRepo = {
-      create: vi.fn((e) => ({ ...e, id: 'invitation-uuid', createdAt: new Date() })),
+      create: vi.fn((e) => ({
+        ...e,
+        id: 'invitation-uuid',
+        createdAt: new Date(),
+      })),
       save: vi.fn((e) => Promise.resolve(e)),
       findOne: vi.fn(),
     };
@@ -48,7 +52,10 @@ describe('EnrollmentService', () => {
 
   describe('createInvitation', () => {
     it('should generate a 32-byte random raw token, store HMAC-SHA256 hash, and return raw token', async () => {
-      const result = await enrollmentService.createInvitation('newuser@example.com', 24);
+      const result = await enrollmentService.createInvitation(
+        'newuser@example.com',
+        24,
+      );
 
       expect(result.rawToken).toHaveLength(64); // 32 bytes hex = 64 hex chars
       expect(mockInvitationRepo.create).toHaveBeenCalledWith(
@@ -97,4 +104,3 @@ describe('EnrollmentService', () => {
     });
   });
 });
-
