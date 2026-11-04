@@ -15,7 +15,8 @@ export class HealthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Application liveness probe',
-    description: 'Indicates whether the application process is running and responding.',
+    description:
+      'Indicates whether the application process is running and responding.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -36,7 +37,8 @@ export class HealthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Application readiness probe',
-    description: 'Indicates whether essential dependencies (PostgreSQL) are connected and ready to serve requests.',
+    description:
+      'Indicates whether essential dependencies (PostgreSQL) are connected and ready to serve requests.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -70,4 +72,3 @@ export class HealthController {
     return await this.healthService.checkReadiness();
   }
 }
-
