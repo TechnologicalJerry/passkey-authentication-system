@@ -30,4 +30,3 @@ export class EnrollmentInvitation {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
-
