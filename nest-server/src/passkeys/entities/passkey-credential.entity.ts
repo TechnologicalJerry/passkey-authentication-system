@@ -57,4 +57,3 @@ export class PasskeyCredential {
   @Column({ type: 'timestamptz', nullable: true })
   revokedAt!: Date | null;
 }
-
