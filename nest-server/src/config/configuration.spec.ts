@@ -61,14 +61,18 @@ describe('Configuration & Environment Validation', () => {
       expect(config.webauthn.userVerification).toBe('preferred');
 
       // Stage 3: JWT Defaults
-      expect(config.jwt.accessSecret).toBe('dev-jwt-access-secret-min-32-chars-key!');
+      expect(config.jwt.accessSecret).toBe(
+        'dev-jwt-access-secret-min-32-chars-key!',
+      );
       expect(config.jwt.accessTtl).toBe('15m');
       expect(config.jwt.issuer).toBe('passkey-auth-api');
       expect(config.jwt.audience).toBe('passkey-auth-app');
 
       // Stage 3: Session Defaults
       expect(config.session.refreshTokenTtlDays).toBe(7);
-      expect(config.session.refreshTokenSecret).toBe('dev-refresh-token-hmac-salt-32-chars!');
+      expect(config.session.refreshTokenSecret).toBe(
+        'dev-refresh-token-hmac-salt-32-chars!',
+      );
       expect(config.session.maxActiveSessions).toBe(5);
       expect(config.session.cookieName).toBe('refresh_token');
       expect(config.session.cookieSecure).toBe(false);
@@ -100,7 +104,8 @@ describe('Configuration & Environment Validation', () => {
     });
 
     it('should parse comma-separated CORS and WebAuthn origins and trim whitespace', () => {
-      process.env.CORS_ORIGINS = ' https://app.example.com , https://admin.example.com ';
+      process.env.CORS_ORIGINS =
+        ' https://app.example.com , https://admin.example.com ';
       process.env.RP_ORIGIN = ' https://auth.example.com ';
 
       const config = configuration();
@@ -135,12 +140,14 @@ describe('Configuration & Environment Validation', () => {
         RP_ORIGIN: 'https://app.example.com',
         CHALLENGE_TTL_MS: 30000,
         USER_VERIFICATION: 'required',
-        JWT_ACCESS_SECRET: 'super-secure-production-jwt-access-secret-32-chars!',
+        JWT_ACCESS_SECRET:
+          'super-secure-production-jwt-access-secret-32-chars!',
         JWT_ACCESS_TTL: '10m',
         JWT_ISSUER: 'auth.production.com',
         JWT_AUDIENCE: 'app.production.com',
         REFRESH_TOKEN_TTL_DAYS: 14,
-        REFRESH_TOKEN_SECRET: 'super-secure-production-refresh-secret-32-chars!',
+        REFRESH_TOKEN_SECRET:
+          'super-secure-production-refresh-secret-32-chars!',
         MAX_ACTIVE_SESSIONS_PER_USER: 3,
         COOKIE_NAME: 'secure_refresh_token',
         COOKIE_SECURE: true,
@@ -149,7 +156,8 @@ describe('Configuration & Environment Validation', () => {
         TRUST_PROXY: true,
       };
 
-      const { error, value } = environmentValidationSchema.validate(validConfig);
+      const { error, value } =
+        environmentValidationSchema.validate(validConfig);
       expect(error).toBeUndefined();
       expect(value.PORT).toBe(8080);
       expect(value.NODE_ENV).toBe('production');
