@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -19,8 +23,16 @@ describe('App Bootstrap & Routing (e2e)', () => {
 
   const mockDataSource = {
     isInitialized: true,
+    entityMetadatas: [],
+    options: { type: 'postgres' },
+    destroy: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
     getRepository: vi.fn().mockReturnValue(mockRepository),
+    transaction: vi.fn((cb: any) =>
+      cb({
+        getRepository: vi.fn().mockReturnValue(mockRepository),
+      }),
+    ),
   };
 
   beforeEach(async () => {
@@ -48,6 +60,7 @@ describe('App Bootstrap & Routing (e2e)', () => {
     );
 
     await app.init();
+    await app.listen(0, '127.0.0.1');
   });
 
   afterEach(async () => {
@@ -55,9 +68,7 @@ describe('App Bootstrap & Routing (e2e)', () => {
   });
 
   it('GET /api (Root)', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/api')
-      .expect(200);
+    const response = await request(app.getHttpServer()).get('/api').expect(200);
 
     expect(response.body).toHaveProperty('name', 'Passkey Authentication API');
     expect(response.body).toHaveProperty('status', 'running');
@@ -70,7 +81,7 @@ describe('App Bootstrap & Routing (e2e)', () => {
 
     expect(response.body).toMatchObject({
       statusCode: 404,
-      error: 'NotFoundException',
+      error: 'Not Found',
       path: '/api/v1/non-existent-route',
     });
     expect(response.body.timestamp).toBeDefined();
