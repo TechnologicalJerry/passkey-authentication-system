@@ -43,7 +43,12 @@ describe('UsersService', () => {
       findOne: vi.fn(),
       findOneByOrFail: vi.fn(),
       save: vi.fn((u) => Promise.resolve({ ...u, updatedAt: new Date() })),
-      create: vi.fn((u) => ({ ...u, id: 'created-uuid', createdAt: new Date(), updatedAt: new Date() })),
+      create: vi.fn((u) => ({
+        ...u,
+        id: 'created-uuid',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
     };
 
     mockSessionsService = {
@@ -155,7 +160,9 @@ describe('UsersService', () => {
 
       expect(result.success).toBe(true);
       expect(mockSessionsService.revokeAllUserSessions).toHaveBeenCalled();
-      expect(mockPasskeysService.revokeAllUserPasskeys).toHaveBeenCalledWith('user-uuid-1');
+      expect(mockPasskeysService.revokeAllUserPasskeys).toHaveBeenCalledWith(
+        'user-uuid-1',
+      );
       expect(mockUserRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
           status: UserStatus.SUSPENDED,
@@ -172,4 +179,3 @@ describe('UsersService', () => {
     });
   });
 });
-
