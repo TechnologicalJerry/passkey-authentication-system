@@ -7,9 +7,9 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
-import { PasskeyCredential } from '../../passkeys/entities/passkey-credential.entity.js';
-import { AuthChallenge } from '../../auth/entities/auth-challenge.entity.js';
-import { Session } from '../../sessions/entities/session.entity.js';
+import type { PasskeyCredential } from '../../passkeys/entities/passkey-credential.entity.js';
+import type { AuthChallenge } from '../../auth/entities/auth-challenge.entity.js';
+import type { Session } from '../../sessions/entities/session.entity.js';
 
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
@@ -46,13 +46,13 @@ export class User {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 
-  @OneToMany(() => PasskeyCredential, (credential) => credential.user)
+  @OneToMany('PasskeyCredential', (credential: PasskeyCredential) => credential.user)
   credentials!: PasskeyCredential[];
 
-  @OneToMany(() => AuthChallenge, (challenge) => challenge.user)
+  @OneToMany('AuthChallenge', (challenge: AuthChallenge) => challenge.user)
   challenges!: AuthChallenge[];
 
-  @OneToMany(() => Session, (session) => session.user)
+  @OneToMany('Session', (session: Session) => session.user)
   sessions!: Session[];
 
   /**
