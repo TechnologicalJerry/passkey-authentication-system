@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UsersController } from './users.controller.js';
 import type { UsersService } from './users.service.js';
-import type { AuditService } from './audit.service.js';
+import type { AuditService } from '../audit/audit.service.js';
 import type { ConfigService } from '@nestjs/config';
 import type { AuthenticatedUser } from '../common/types/index.js';
 import { UserStatus } from './entities/user.entity.js';
@@ -87,7 +87,9 @@ describe('UsersController', () => {
   });
 
   it('PATCH /me updates permitted profile fields', async () => {
-    const result = await controller.updateProfile(authUser, { displayName: 'Alice Updated' });
+    const result = await controller.updateProfile(authUser, {
+      displayName: 'Alice Updated',
+    });
     expect(result.displayName).toBe('Alice Updated');
     expect(mockUsersService.updateProfile).toHaveBeenCalledWith('user-uuid-1', {
       displayName: 'Alice Updated',
@@ -98,7 +100,9 @@ describe('UsersController', () => {
     const mockRes = { clearCookie: vi.fn() } as any;
     const result = await controller.deactivateAccount(authUser, mockRes);
     expect(result.success).toBe(true);
-    expect(mockUsersService.deactivateAccount).toHaveBeenCalledWith('user-uuid-1');
+    expect(mockUsersService.deactivateAccount).toHaveBeenCalledWith(
+      'user-uuid-1',
+    );
     expect(mockRes.clearCookie).toHaveBeenCalled();
   });
 
@@ -110,4 +114,3 @@ describe('UsersController', () => {
     expect(mockRes.clearCookie).toHaveBeenCalled();
   });
 });
-
