@@ -23,4 +23,3 @@ export class UserProfileDto {
   @ApiProperty({ example: '2026-11-01T21:00:00.000Z' })
   updatedAt!: string;
 }
-
