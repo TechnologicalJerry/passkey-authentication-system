@@ -18,6 +18,8 @@ export enum RevocationReason {
   SESSION_LIMIT_EXCEEDED = 'SESSION_LIMIT_EXCEEDED',
   ADMIN_REVOKED = 'ADMIN_REVOKED',
   SECURITY_POLICY = 'SECURITY_POLICY',
+  ACCOUNT_DEACTIVATED = 'ACCOUNT_DEACTIVATED',
+  ACCOUNT_DELETED = 'ACCOUNT_DELETED',
 }
 
 @Entity('sessions')
@@ -86,4 +88,3 @@ export class Session {
     return this.revokedAt === null && this.expiresAt > new Date();
   }
 }
-
