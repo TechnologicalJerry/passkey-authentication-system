@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -18,6 +22,9 @@ describe('Route-Specific Rate Limiting (e2e)', () => {
 
   const mockDataSource = {
     isInitialized: true,
+    entityMetadatas: [],
+    options: { type: 'postgres' },
+    destroy: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
     getRepository: vi.fn().mockReturnValue({
       findOne: vi.fn(),
@@ -80,4 +87,3 @@ describe('Route-Specific Rate Limiting (e2e)', () => {
     expect(rateLimitedRes.body.message).toContain('ThrottlerException');
   });
 });
-
