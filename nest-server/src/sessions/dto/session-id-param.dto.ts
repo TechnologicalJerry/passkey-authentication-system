@@ -10,4 +10,3 @@ export class SessionIdParamDto {
   @IsNotEmpty({ message: 'Session ID is required' })
   id!: string;
 }
-
