@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType, UnauthorizedException } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
@@ -45,6 +49,9 @@ describe('User Account Lifecycle (e2e)', () => {
 
   const mockDataSource = {
     isInitialized: true,
+    entityMetadatas: [],
+    options: { type: 'postgres' },
+    destroy: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
     getRepository: vi.fn().mockReturnValue({
       findOne: vi.fn(),
@@ -109,9 +116,7 @@ describe('User Account Lifecycle (e2e)', () => {
 
   describe('GET /api/v1/users/me', () => {
     it('should return 401 Unauthorized if Authorization header is missing', async () => {
-      await request(app.getHttpServer())
-        .get('/api/v1/users/me')
-        .expect(401);
+      await request(app.getHttpServer()).get('/api/v1/users/me').expect(401);
     });
 
     it('should return user profile for authenticated user', async () => {
@@ -162,9 +167,12 @@ describe('User Account Lifecycle (e2e)', () => {
         .expect(200);
 
       expect(response.body.displayName).toBe('Alice Cooper');
-      expect(mockUsersService.updateProfile).toHaveBeenCalledWith(mockAuthUser.id, {
-        displayName: 'Alice Cooper',
-      });
+      expect(mockUsersService.updateProfile).toHaveBeenCalledWith(
+        mockAuthUser.id,
+        {
+          displayName: 'Alice Cooper',
+        },
+      );
     });
 
     it('should reject requests with forbidden/non-whitelisted fields (e.g. status, id, email)', async () => {
@@ -186,11 +194,13 @@ describe('User Account Lifecycle (e2e)', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(mockUsersService.deactivateAccount).toHaveBeenCalledWith(mockAuthUser.id);
+      expect(mockUsersService.deactivateAccount).toHaveBeenCalledWith(
+        mockAuthUser.id,
+      );
 
-      const cookies = response.headers['set-cookie'];
+      const cookies = response.headers['set-cookie'] as string[] | undefined;
       expect(cookies).toBeDefined();
-      expect(cookies[0]).toMatch(/refresh_token=;.*(Expires=|Max-Age=0)/i);
+      expect(cookies![0]).toMatch(/refresh_token=;.*(Expires=|Max-Age=0)/i);
     });
   });
 
@@ -207,7 +217,9 @@ describe('User Account Lifecycle (e2e)', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(mockUsersService.deleteAccount).toHaveBeenCalledWith(mockAuthUser.id);
+      expect(mockUsersService.deleteAccount).toHaveBeenCalledWith(
+        mockAuthUser.id,
+      );
     });
   });
 
@@ -243,4 +255,3 @@ describe('User Account Lifecycle (e2e)', () => {
     });
   });
 });
-
