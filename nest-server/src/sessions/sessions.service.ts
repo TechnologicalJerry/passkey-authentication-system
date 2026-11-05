@@ -6,14 +6,27 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, IsNull, MoreThan, Repository } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  IsNull,
+  MoreThan,
+  Repository,
+} from 'typeorm';
 import { randomUUID } from 'node:crypto';
 import { Session, RevocationReason } from './entities/session.entity.js';
-import { User, UserStatus } from '../users/entities/user.entity.js';
+import { UserStatus } from '../users/entities/user.entity.js';
 import { TokenService } from '../auth/token.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import { AuditEventType, AuditOutcome } from '../audit/entities/audit-log.entity.js';
-import type { AppConfig, SessionSummary, TokenPair } from '../common/types/index.js';
+import {
+  AuditEventType,
+  AuditOutcome,
+} from '../audit/entities/audit-log.entity.js';
+import type {
+  AppConfig,
+  SessionSummary,
+  TokenPair,
+} from '../common/types/index.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 export interface CreateSessionParams {
@@ -55,7 +68,8 @@ export class SessionsService {
     rawRefreshToken: string;
   }> {
     const rawRefreshToken = this.tokenService.generateRefreshToken();
-    const refreshTokenHash = this.tokenService.hashRefreshToken(rawRefreshToken);
+    const refreshTokenHash =
+      this.tokenService.hashRefreshToken(rawRefreshToken);
     const refreshTokenFamily = randomUUID();
 
     const ttlDays = this.sessionConfig.refreshTokenTtlDays;
@@ -224,7 +238,8 @@ export class SessionsService {
 
       // Generate replacement refresh token
       const newRawRefreshToken = this.tokenService.generateRefreshToken();
-      const newRefreshTokenHash = this.tokenService.hashRefreshToken(newRawRefreshToken);
+      const newRefreshTokenHash =
+        this.tokenService.hashRefreshToken(newRawRefreshToken);
 
       session.previousRefreshTokenHash = presentedHash;
       session.refreshTokenHash = newRefreshTokenHash;
@@ -423,10 +438,14 @@ export class SessionsService {
   private deriveDeviceLabel(userAgent?: string | null): string {
     if (!userAgent) return 'Unknown Device';
     if (userAgent.includes('Macintosh') || userAgent.includes('Mac OS')) {
-      return userAgent.includes('Chrome') ? 'Chrome on macOS' : 'Safari on macOS';
+      return userAgent.includes('Chrome')
+        ? 'Chrome on macOS'
+        : 'Safari on macOS';
     }
     if (userAgent.includes('Windows')) {
-      return userAgent.includes('Edg') ? 'Edge on Windows' : 'Chrome on Windows';
+      return userAgent.includes('Edg')
+        ? 'Edge on Windows'
+        : 'Chrome on Windows';
     }
     if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
       return 'Mobile Safari on iOS';
