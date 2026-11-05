@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -18,7 +22,11 @@ describe('Passkey Authentication Ceremony (e2e)', () => {
 
   const mockDataSource = {
     isInitialized: true,
+    entityMetadatas: [],
+    options: { type: 'postgres' },
+    destroy: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
+    getRepository: vi.fn().mockReturnValue({}),
   };
 
   beforeEach(async () => {
@@ -58,7 +66,7 @@ describe('Passkey Authentication Ceremony (e2e)', () => {
   describe('POST /api/v1/auth/passkeys/authentication/options', () => {
     it('should generate discoverable options when email is not provided', async () => {
       const mockResult = {
-        challengeId: '6fa459ea-ee8a-3ca4-894e-db77e160355e',
+        challengeId: '6fa459ea-ee8a-4ca4-894e-db77e160355e',
         options: {
           challenge: 'mock-auth-challenge-bytes',
           rpId: 'localhost',
@@ -67,7 +75,9 @@ describe('Passkey Authentication Ceremony (e2e)', () => {
           allowCredentials: [],
         },
       };
-      mockAuthService.generateAuthenticationOptions.mockResolvedValueOnce(mockResult);
+      mockAuthService.generateAuthenticationOptions.mockResolvedValueOnce(
+        mockResult,
+      );
 
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/passkeys/authentication/options')
@@ -75,19 +85,23 @@ describe('Passkey Authentication Ceremony (e2e)', () => {
         .expect(200);
 
       expect(response.body).toEqual(mockResult);
-      expect(mockAuthService.generateAuthenticationOptions).toHaveBeenCalledWith({});
+      expect(
+        mockAuthService.generateAuthenticationOptions,
+      ).toHaveBeenCalledWith({});
     });
 
     it('should generate user-targeted options when email is provided', async () => {
       const mockResult = {
-        challengeId: '6fa459ea-ee8a-3ca4-894e-db77e160355e',
+        challengeId: '6fa459ea-ee8a-4ca4-894e-db77e160355e',
         options: {
           challenge: 'mock-auth-challenge-bytes',
           rpId: 'localhost',
           allowCredentials: [{ id: 'cred-1', transports: ['internal'] }],
         },
       };
-      mockAuthService.generateAuthenticationOptions.mockResolvedValueOnce(mockResult);
+      mockAuthService.generateAuthenticationOptions.mockResolvedValueOnce(
+        mockResult,
+      );
 
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/passkeys/authentication/options')
@@ -95,7 +109,9 @@ describe('Passkey Authentication Ceremony (e2e)', () => {
         .expect(200);
 
       expect(response.body).toEqual(mockResult);
-      expect(mockAuthService.generateAuthenticationOptions).toHaveBeenCalledWith(
+      expect(
+        mockAuthService.generateAuthenticationOptions,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({ email: 'user@example.com' }),
       );
     });
@@ -120,10 +136,12 @@ describe('Passkey Authentication Ceremony (e2e)', () => {
           createdAt: new Date().toISOString(),
         },
       };
-      mockAuthService.verifyAuthentication.mockResolvedValueOnce(mockSuccessResult);
+      mockAuthService.verifyAuthentication.mockResolvedValueOnce(
+        mockSuccessResult,
+      );
 
       const validPayload = {
-        challengeId: '6fa459ea-ee8a-3ca4-894e-db77e160355e',
+        challengeId: '6fa459ea-ee8a-4ca4-894e-db77e160355e',
         response: {
           id: 'credential-id-base64',
           rawId: 'credential-id-base64',
@@ -168,4 +186,3 @@ describe('Passkey Authentication Ceremony (e2e)', () => {
     });
   });
 });
-
