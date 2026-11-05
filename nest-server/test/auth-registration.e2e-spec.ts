@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -18,7 +22,11 @@ describe('Passkey Registration Ceremony (e2e)', () => {
 
   const mockDataSource = {
     isInitialized: true,
+    entityMetadatas: [],
+    options: { type: 'postgres' },
+    destroy: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
+    getRepository: vi.fn().mockReturnValue({}),
   };
 
   beforeEach(async () => {
@@ -58,16 +66,22 @@ describe('Passkey Registration Ceremony (e2e)', () => {
   describe('POST /api/v1/auth/passkeys/registration/options', () => {
     it('should generate registration options for a valid email address', async () => {
       const mockResult = {
-        challengeId: '6fa459ea-ee8a-3ca4-894e-db77e160355e',
+        challengeId: '6fa459ea-ee8a-4ca4-894e-db77e160355e',
         options: {
           challenge: 'mock-crypto-challenge-bytes',
           rp: { name: 'Passkey Authentication System', id: 'localhost' },
-          user: { id: 'user-id', name: 'user@example.com', displayName: 'User' },
+          user: {
+            id: 'user-id',
+            name: 'user@example.com',
+            displayName: 'User',
+          },
           pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
           timeout: 60000,
         },
       };
-      mockAuthService.generateRegistrationOptions.mockResolvedValueOnce(mockResult);
+      mockAuthService.generateRegistrationOptions.mockResolvedValueOnce(
+        mockResult,
+      );
 
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/passkeys/registration/options')
@@ -76,7 +90,10 @@ describe('Passkey Registration Ceremony (e2e)', () => {
 
       expect(response.body).toEqual(mockResult);
       expect(mockAuthService.generateRegistrationOptions).toHaveBeenCalledWith(
-        expect.objectContaining({ email: 'user@example.com', displayName: 'User' }),
+        expect.objectContaining({
+          email: 'user@example.com',
+          displayName: 'User',
+        }),
       );
     });
 
@@ -116,10 +133,12 @@ describe('Passkey Registration Ceremony (e2e)', () => {
           createdAt: new Date().toISOString(),
         },
       };
-      mockAuthService.verifyRegistration.mockResolvedValueOnce(mockSuccessResult);
+      mockAuthService.verifyRegistration.mockResolvedValueOnce(
+        mockSuccessResult,
+      );
 
       const validPayload = {
-        challengeId: '6fa459ea-ee8a-3ca4-894e-db77e160355e',
+        challengeId: '6fa459ea-ee8a-4ca4-894e-db77e160355e',
         response: {
           id: 'credential-id-base64',
           rawId: 'credential-id-base64',
@@ -162,4 +181,3 @@ describe('Passkey Registration Ceremony (e2e)', () => {
     });
   });
 });
-
