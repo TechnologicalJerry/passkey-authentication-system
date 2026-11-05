@@ -3,13 +3,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, VersioningType } from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
-import { HealthModule } from '../src/health/health.module.js';
+import { HealthController } from '../src/health/health.controller.js';
+import { HealthService } from '../src/health/health.service.js';
 
 describe('Health Endpoints (e2e)', () => {
   let app: INestApplication;
   const mockDataSource = {
     isInitialized: true,
     query: vi.fn(),
+    destroy: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -17,11 +19,15 @@ describe('Health Endpoints (e2e)', () => {
     mockDataSource.query.mockReset();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [HealthModule],
-    })
-      .overrideProvider(getDataSourceToken())
-      .useValue(mockDataSource)
-      .compile();
+      controllers: [HealthController],
+      providers: [
+        HealthService,
+        {
+          provide: getDataSourceToken(),
+          useValue: mockDataSource,
+        },
+      ],
+    }).compile();
 
     app = moduleFixture.createNestApplication();
 
@@ -92,4 +98,3 @@ describe('Health Endpoints (e2e)', () => {
     });
   });
 });
-
