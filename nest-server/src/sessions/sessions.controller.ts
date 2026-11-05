@@ -64,7 +64,8 @@ export class SessionsController {
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid, expired, or reused refresh token (triggers session revocation)',
+    description:
+      'Invalid, expired, or reused refresh token (triggers session revocation)',
   })
   async refreshToken(
     @Body() dto: RefreshTokenDto,
@@ -76,7 +77,9 @@ export class SessionsController {
     const rawToken = dto.refreshToken ?? cookieToken;
 
     if (!rawToken) {
-      throw new UnauthorizedException('Refresh token is required via cookie or request body');
+      throw new UnauthorizedException(
+        'Refresh token is required via cookie or request body',
+      );
     }
 
     // CSRF Protection for cookie-based refresh requests:
@@ -85,10 +88,16 @@ export class SessionsController {
     if (cookieToken && !dto.refreshToken) {
       const origin = req.headers['origin'] || req.headers['referer'];
       if (origin && typeof origin === 'string') {
-        const allowedOrigins = this.configService.get<string[]>('cors.origins') ?? ['http://localhost:3000'];
-        const isAllowed = allowedOrigins.some((allowed) => origin.startsWith(allowed));
+        const allowedOrigins = this.configService.get<string[]>(
+          'cors.origins',
+        ) ?? ['http://localhost:3000'];
+        const isAllowed = allowedOrigins.some((allowed) =>
+          origin.startsWith(allowed),
+        );
         if (!isAllowed) {
-          throw new UnauthorizedException('Cross-Site Request Forgery (CSRF) validation failed');
+          throw new UnauthorizedException(
+            'Cross-Site Request Forgery (CSRF) validation failed',
+          );
         }
       }
     }
@@ -117,8 +126,14 @@ export class SessionsController {
     description:
       'Revokes the authenticated session, invalidates its refresh token, and clears the cookie.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Current session logged out successfully' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Current session logged out successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required',
+  })
   async logout(
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
@@ -139,15 +154,24 @@ export class SessionsController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Logout all sessions (all devices)',
-    description: 'Revokes all active sessions for the current user and clears the cookie.',
+    description:
+      'Revokes all active sessions for the current user and clears the cookie.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'All active sessions revoked' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'All active sessions revoked',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required',
+  })
   async logoutAll(
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ success: boolean; message: string; revokedCount: number }> {
-    const revokedCount = await this.sessionsService.revokeAllUserSessions(user.id);
+    const revokedCount = await this.sessionsService.revokeAllUserSessions(
+      user.id,
+    );
     this.clearRefreshTokenCookie(res);
 
     return {
@@ -166,13 +190,23 @@ export class SessionsController {
     description:
       'Returns active and historical sessions for the current user with safe metadata (no tokens/hashes) and optional pagination.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Sessions listed successfully' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Sessions listed successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required',
+  })
   async listSessions(
     @CurrentUser() user: AuthenticatedUser,
     @Query() pagination?: PaginationQueryDto,
   ): Promise<SessionSummary[]> {
-    return this.sessionsService.listUserSessions(user.id, user.sessionId, pagination);
+    return this.sessionsService.listUserSessions(
+      user.id,
+      user.sessionId,
+      pagination,
+    );
   }
 
   @Delete('sessions/:id')
@@ -182,11 +216,21 @@ export class SessionsController {
   @ApiBearerAuth('bearer')
   @ApiOperation({
     summary: 'Revoke a specific session',
-    description: 'Revokes a specific session belonging to the authenticated user.',
+    description:
+      'Revokes a specific session belonging to the authenticated user.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Session revoked successfully' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Session not found' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Session revoked successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Session not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required',
+  })
   async revokeSession(
     @Param() param: SessionIdParamDto,
     @CurrentUser() user: AuthenticatedUser,
