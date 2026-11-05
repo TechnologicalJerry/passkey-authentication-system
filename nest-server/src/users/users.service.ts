@@ -15,7 +15,10 @@ import { SessionsService } from '../sessions/sessions.service.js';
 import { RevocationReason } from '../sessions/entities/session.entity.js';
 import { PasskeysService } from '../passkeys/passkeys.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import { AuditEventType, AuditOutcome } from '../audit/entities/audit-log.entity.js';
+import {
+  AuditEventType,
+  AuditOutcome,
+} from '../audit/entities/audit-log.entity.js';
 
 @Injectable()
 export class UsersService {
@@ -54,7 +57,10 @@ export class UsersService {
   /**
    * Creates a user in PENDING status during initial passkey registration.
    */
-  async createPendingUser(email: string, displayName?: string | null): Promise<User> {
+  async createPendingUser(
+    email: string,
+    displayName?: string | null,
+  ): Promise<User> {
     const normalizedEmail = User.normalizeEmail(email);
     const user = this.userRepository.create({
       email: normalizedEmail,
@@ -104,7 +110,10 @@ export class UsersService {
    * Updates explicitly permitted profile fields (e.g. displayName).
    * Protected fields (id, email, status, roles) are ignored or rejected.
    */
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<UserProfileDto> {
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<UserProfileDto> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User profile not found');
@@ -177,7 +186,9 @@ export class UsersService {
    * 4. Anonymizes PII (email, displayName).
    * 5. Retains audit records to preserve regulatory and security compliance.
    */
-  async deleteAccount(userId: string): Promise<{ success: boolean; message: string }> {
+  async deleteAccount(
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User profile not found');
@@ -208,7 +219,8 @@ export class UsersService {
 
     return {
       success: true,
-      message: 'Account has been safely deleted and personal identifiers anonymized.',
+      message:
+        'Account has been safely deleted and personal identifiers anonymized.',
     };
   }
 }
