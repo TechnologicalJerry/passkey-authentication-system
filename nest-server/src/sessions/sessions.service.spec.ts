@@ -39,13 +39,22 @@ describe('SessionsService', () => {
   };
 
   beforeEach(() => {
+    const mockQueryBuilder = {
+      setLock: vi.fn().mockReturnThis(),
+      leftJoinAndSelect: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      getOne: vi.fn().mockImplementation(() => (mockSessionRepository.findOne as any)()),
+    };
+
     mockSessionRepository = {
       find: vi.fn().mockResolvedValue([]),
       findOne: vi.fn(),
       create: vi.fn((data) => ({ id: 'new-session-id', ...data })),
-      save: vi.fn((session) => Promise.resolve({ id: session.id ?? 'saved-session-id', ...session })),
+      save: vi.fn((session) =>
+        Promise.resolve({ id: session.id ?? 'saved-session-id', ...session }),
+      ),
       update: vi.fn().mockResolvedValue({ affected: 1 }),
-      createQueryBuilder: vi.fn(),
+      createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
     };
 
     mockTokenService = {
@@ -69,11 +78,16 @@ describe('SessionsService', () => {
       ),
     };
 
+    const mockAuditService = {
+      logEvent: vi.fn().mockResolvedValue(null),
+    };
+
     service = new SessionsService(
       mockSessionRepository as unknown as Repository<Session>,
       mockTokenService as unknown as TokenService,
       mockConfigService as unknown as ConfigService,
       mockDataSource as unknown as DataSource,
+      mockAuditService as any,
     );
   });
 
@@ -89,7 +103,9 @@ describe('SessionsService', () => {
 
       expect(result.rawRefreshToken).toBe('raw-refresh-token-123');
       expect(result.session.userId).toBe('user-1');
-      expect(result.session.refreshTokenHash).toBe('hashed_raw-refresh-token-123');
+      expect(result.session.refreshTokenHash).toBe(
+        'hashed_raw-refresh-token-123',
+      );
       expect(result.session.ipAddress).toBe('127.0.0.1');
     });
 
@@ -109,7 +125,10 @@ describe('SessionsService', () => {
       };
 
       // Already 2 active sessions (max is 2)
-      mockSessionRepository.find.mockResolvedValueOnce([existingSession1, existingSession2]);
+      mockSessionRepository.find.mockResolvedValueOnce([
+        existingSession1,
+        existingSession2,
+      ]);
 
       await service.createSession({ userId: 'user-1' });
 
@@ -134,11 +153,17 @@ describe('SessionsService', () => {
         refreshTokenFamily: 'family-1',
         revokedAt: null,
         expiresAt: new Date(Date.now() + 100000),
-        user: { id: 'user-1', email: 'u@example.com', status: UserStatus.ACTIVE },
+        user: {
+          id: 'user-1',
+          email: 'u@example.com',
+          status: UserStatus.ACTIVE,
+        },
       };
 
       mockSessionRepository.findOne.mockResolvedValueOnce(activeSession);
-      mockTokenService.generateRefreshToken.mockReturnValueOnce('new-raw-refresh-token');
+      mockTokenService.generateRefreshToken.mockReturnValueOnce(
+        'new-raw-refresh-token',
+      );
 
       const result = await service.rotateRefreshToken('valid-token');
 
@@ -163,11 +188,13 @@ describe('SessionsService', () => {
         revokedAt: null,
       };
 
-      mockSessionRepository.findOne.mockResolvedValueOnce(sessionWithPriorRotation);
-
-      await expect(service.rotateRefreshToken('old-rotated-token')).rejects.toThrow(
-        'Refresh token reuse detected',
+      mockSessionRepository.findOne.mockResolvedValueOnce(
+        sessionWithPriorRotation,
       );
+
+      await expect(
+        service.rotateRefreshToken('old-rotated-token'),
+      ).rejects.toThrow('Refresh token reuse detected');
 
       // Session family should be revoked
       expect(mockSessionRepository.save).toHaveBeenCalledWith(
@@ -178,16 +205,18 @@ describe('SessionsService', () => {
       );
       expect(mockSessionRepository.update).toHaveBeenCalledWith(
         expect.objectContaining({ refreshTokenFamily: 'family-1' }),
-        expect.objectContaining({ revocationReason: RevocationReason.REUSE_DETECTED }),
+        expect.objectContaining({
+          revocationReason: RevocationReason.REUSE_DETECTED,
+        }),
       );
     });
 
     it('should reject unknown refresh tokens with UnauthorizedException', async () => {
       mockSessionRepository.findOne.mockResolvedValueOnce(null);
 
-      await expect(service.rotateRefreshToken('completely-unknown-token')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.rotateRefreshToken('completely-unknown-token'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('should reject refresh if user account is suspended', async () => {
@@ -197,11 +226,17 @@ describe('SessionsService', () => {
         refreshTokenHash: 'hashed_valid-token',
         revokedAt: null,
         expiresAt: new Date(Date.now() + 100000),
-        user: { id: 'user-1', email: 'u@example.com', status: UserStatus.SUSPENDED },
+        user: {
+          id: 'user-1',
+          email: 'u@example.com',
+          status: UserStatus.SUSPENDED,
+        },
       };
       mockSessionRepository.findOne.mockResolvedValueOnce(sessionSuspendedUser);
 
-      await expect(service.rotateRefreshToken('valid-token')).rejects.toThrow('Account is suspended');
+      await expect(service.rotateRefreshToken('valid-token')).rejects.toThrow(
+        'User account is suspended',
+      );
     });
   });
 
@@ -259,8 +294,9 @@ describe('SessionsService', () => {
     it('should throw NotFoundException if session does not belong to the user', async () => {
       mockSessionRepository.findOne.mockResolvedValueOnce(null);
 
-      await expect(service.revokeSession('s-other', 'u-1')).rejects.toThrow(NotFoundException);
+      await expect(service.revokeSession('s-other', 'u-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
-
