@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+  BadRequestException,
+} from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
@@ -10,7 +15,10 @@ import { AuthService } from '../src/auth/auth.service.js';
 import { TokenService } from '../src/auth/token.service.js';
 import { SessionsService } from '../src/sessions/sessions.service.js';
 import { UserStatus } from '../src/users/entities/user.entity.js';
-import type { AuthenticatedUser, PasskeySummary } from '../src/common/types/index.js';
+import type {
+  AuthenticatedUser,
+  PasskeySummary,
+} from '../src/common/types/index.js';
 
 describe('Passkeys & Credential Management (e2e)', () => {
   let app: INestApplication;
@@ -42,6 +50,9 @@ describe('Passkeys & Credential Management (e2e)', () => {
 
   const mockDataSource = {
     isInitialized: true,
+    entityMetadatas: [],
+    options: { type: 'postgres' },
+    destroy: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
     getRepository: vi.fn().mockReturnValue({
       findOne: vi.fn(),
@@ -130,13 +141,13 @@ describe('Passkeys & Credential Management (e2e)', () => {
       expect(response.body).toHaveLength(1);
       expect(response.body[0].label).toBe('MacBook Touch ID');
       expect(response.body[0].publicKey).toBeUndefined();
-      expect(mockPasskeysService.listUserPasskeys).toHaveBeenCalledWith(mockAuthUser.id);
+      expect(mockPasskeysService.listUserPasskeys).toHaveBeenCalledWith(
+        mockAuthUser.id,
+      );
     });
 
     it('should return 401 Unauthorized if request lacks Bearer token', async () => {
-      await request(app.getHttpServer())
-        .get('/api/v1/passkeys')
-        .expect(401);
+      await request(app.getHttpServer()).get('/api/v1/passkeys').expect(401);
     });
   });
 
@@ -181,7 +192,9 @@ describe('Passkeys & Credential Management (e2e)', () => {
         .set('Authorization', 'Bearer valid.jwt.token')
         .expect(400);
 
-      expect(response.body.message).toContain('Cannot remove your only active passkey');
+      expect(response.body.message).toContain(
+        'Cannot remove your only active passkey',
+      );
     });
 
     it('should successfully revoke passkey if account has multiple passkeys', async () => {
@@ -220,4 +233,3 @@ describe('Passkeys & Credential Management (e2e)', () => {
     });
   });
 });
-
