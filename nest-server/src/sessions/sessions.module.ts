@@ -18,4 +18,3 @@ import { TokenService } from '../auth/token.service.js';
   exports: [SessionsService, TokenService, TypeOrmModule],
 })
 export class SessionsModule {}
-
