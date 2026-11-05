@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import { AppModule } from '../src/app.module.js';
 import { SessionsService } from '../src/sessions/sessions.service.js';
 import { TokenService } from '../src/auth/token.service.js';
-import type { AuthenticatedUser, TokenPair, SessionSummary } from '../src/common/types/index.js';
+import type {
+  AuthenticatedUser,
+  TokenPair,
+  SessionSummary,
+} from '../src/common/types/index.js';
 
 describe('Auth Sessions & Token Lifecycle (e2e)', () => {
   let app: INestApplication;
@@ -43,6 +53,9 @@ describe('Auth Sessions & Token Lifecycle (e2e)', () => {
 
   const mockDataSource = {
     isInitialized: true,
+    entityMetadatas: [],
+    options: { type: 'postgres' },
+    destroy: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
     getRepository: vi.fn().mockReturnValue({
       findOne: vi.fn(),
@@ -109,11 +122,13 @@ describe('Auth Sessions & Token Lifecycle (e2e)', () => {
       });
 
       // Verify HttpOnly cookie is set
-      const cookies = response.headers['set-cookie'];
+      const cookies = response.headers['set-cookie'] as string[] | undefined;
       expect(cookies).toBeDefined();
-      expect(cookies[0]).toContain('refresh_token=valid-raw-refresh-token-hex-32');
-      expect(cookies[0]).toContain('HttpOnly');
-      expect(cookies[0]).toContain('Path=/api/v1/auth');
+      expect(cookies![0]).toContain(
+        'refresh_token=valid-raw-refresh-token-hex-32',
+      );
+      expect(cookies![0]).toContain('HttpOnly');
+      expect(cookies![0]).toContain('Path=/api/v1/auth');
     });
 
     it('should rotate token when refresh token is supplied in cookie', async () => {
@@ -194,9 +209,9 @@ describe('Auth Sessions & Token Lifecycle (e2e)', () => {
       );
 
       // Verify cookie is cleared (expires in past or max-age=0)
-      const cookies = response.headers['set-cookie'];
+      const cookies = response.headers['set-cookie'] as string[] | undefined;
       expect(cookies).toBeDefined();
-      expect(cookies[0]).toMatch(/refresh_token=;.*(Expires=|Max-Age=0)/i);
+      expect(cookies![0]).toMatch(/refresh_token=;.*(Expires=|Max-Age=0)/i);
     });
   });
 
@@ -224,7 +239,9 @@ describe('Auth Sessions & Token Lifecycle (e2e)', () => {
         message: 'All active sessions have been revoked',
         revokedCount: 3,
       });
-      expect(mockSessionsService.revokeAllUserSessions).toHaveBeenCalledWith(mockUser.id);
+      expect(mockSessionsService.revokeAllUserSessions).toHaveBeenCalledWith(
+        mockUser.id,
+      );
     });
   });
 
@@ -266,7 +283,9 @@ describe('Auth Sessions & Token Lifecycle (e2e)', () => {
         },
       ];
 
-      mockSessionsService.listUserSessions.mockResolvedValueOnce(mockSessionList);
+      mockSessionsService.listUserSessions.mockResolvedValueOnce(
+        mockSessionList,
+      );
 
       const response = await request(app.getHttpServer())
         .get('/api/v1/auth/sessions')
@@ -355,4 +374,3 @@ describe('Auth Sessions & Token Lifecycle (e2e)', () => {
     });
   });
 });
-
