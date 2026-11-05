@@ -53,18 +53,27 @@ export class UsersController {
     description: 'Returns the profile for the authenticated user.',
   })
   @ApiResponse({ status: HttpStatus.OK, type: UserProfileDto })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
-  async getProfile(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileDto> {
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required',
+  })
+  async getProfile(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<UserProfileDto> {
     return this.usersService.getProfile(user.id);
   }
 
   @Patch('me')
   @ApiOperation({
     summary: 'Update current user profile',
-    description: 'Updates allowed profile fields (e.g. displayName). Protected fields cannot be modified.',
+    description:
+      'Updates allowed profile fields (e.g. displayName). Protected fields cannot be modified.',
   })
   @ApiResponse({ status: HttpStatus.OK, type: UserProfileDto })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Authentication required' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Authentication required',
+  })
   async updateProfile(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateProfileDto,
@@ -80,7 +89,10 @@ export class UsersController {
     description:
       'Suspends the account and revokes all active sessions across all devices. Rejects future authentications.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Account deactivated successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Account deactivated successfully',
+  })
   async deactivateAccount(
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
@@ -90,7 +102,8 @@ export class UsersController {
 
     return {
       success: true,
-      message: 'Account has been deactivated. All active sessions have been revoked.',
+      message:
+        'Account has been deactivated. All active sessions have been revoked.',
     };
   }
 
@@ -102,7 +115,10 @@ export class UsersController {
     description:
       'Revokes all credentials and sessions, anonymizes PII, and retains non-PII audit trail.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Account deleted and personal data anonymized' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Account deleted and personal data anonymized',
+  })
   async deleteAccount(
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
@@ -116,7 +132,8 @@ export class UsersController {
   @Get('me/audit-logs')
   @ApiOperation({
     summary: 'Get paginated security audit logs for current user',
-    description: 'Returns historical security audit events associated with the authenticated account.',
+    description:
+      'Returns historical security audit events associated with the authenticated account.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Paginated audit logs' })
   async getAuditLogs(
@@ -135,4 +152,3 @@ export class UsersController {
     });
   }
 }
-
