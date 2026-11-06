@@ -43,7 +43,9 @@ describe('SessionsService', () => {
       setLock: vi.fn().mockReturnThis(),
       leftJoinAndSelect: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
-      getOne: vi.fn().mockImplementation(() => (mockSessionRepository.findOne as any)()),
+      getOne: vi
+        .fn()
+        .mockImplementation(() => (mockSessionRepository.findOne as any)()),
     };
 
     mockSessionRepository = {
