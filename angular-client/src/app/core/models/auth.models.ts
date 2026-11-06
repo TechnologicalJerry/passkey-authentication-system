@@ -58,4 +58,3 @@ export interface AuthenticationVerifyDto {
   challengeId: string;
   response: AuthenticationResponseJSON;
 }
-
