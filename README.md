@@ -56,7 +56,7 @@ This repository serves as the definitive reference implementation for passwordle
 
 | Framework | Directory | Runtime / Language | ORM / Storage | Status | Highlights |
 |---|---|---|---|:---:|---|
-| **NestJS** | [`nest-server/`](file:///d:/GitHub/passkey-authentication-system/nest-server) | Node.js 24 (ESM), TypeScript | PostgreSQL 17, TypeORM | 🟢 **Active (Stages 1–3 Complete)** | Modular architecture, DI, TypeORM migrations, Pino logging, Swagger, Vitest |
+| **NestJS** | [`nest-server/`](file:///d:/GitHub/passkey-authentication-system/nest-server) | Node.js 24 (ESM), TypeScript | PostgreSQL 17, TypeORM | 🟢 **Active (Production-Ready)** | Modular architecture, DI, TypeORM migrations, Pino logging, Swagger, Vitest, CI |
 | **Express** | `express-server/` | Node.js (ESM), TypeScript | PostgreSQL, Drizzle ORM | 🟡 *Planned* | Minimalist, unopinionated, lightweight middleware pipeline |
 | **Fastify** | `fastify-server/` | Node.js (ESM), TypeScript | PostgreSQL, Prisma ORM | 🟡 *Planned* | High-performance, schema-based serialization, low overhead |
 | **Hono** | `hono-server/` | Multi-runtime (Node / Bun / Cloudflare) | PostgreSQL / Edge KV | 🟡 *Planned* | Ultrafast, web-standards compliant, edge & serverless ready |
@@ -65,8 +65,8 @@ This repository serves as the definitive reference implementation for passwordle
 
 | Framework | Directory | Tech Stack | WebAuthn Integration | Status | Highlights |
 |---|---|---|---|:---:|---|
+| **Angular** | [`angular-client/`](file:///d:/GitHub/passkey-authentication-system/angular-client) | Angular 22 LTS, Signals, Tailwind CSS v4 | `@simplewebauthn/browser` | 🟢 **Active (Production-Ready)** | 100% Standalone, Signals state, functional interceptor & refresh queue, SSR safe |
 | **Next.js** | `next-client/` | React 19, Next.js App Router, Tailwind CSS | `@simplewebauthn/browser` | 🟡 *Planned* | Server components, autofill biometrics, cookie auth |
-| **Angular** | `angular-client/` | Angular 19+, Signals, Tailwind CSS | Native WebAuthn API & RxJS | 🟡 *Planned* | Standalone components, reactive state, typed HTTP |
 | **Vue.js** | `vue-client/` | Vue 3, Composition API, Pinia, Vite | `@simplewebauthn/browser` | 🟡 *Planned* | Lightweight reactive UI, composables for passkeys |
 
 > [!TIP]
