@@ -13,4 +13,3 @@ export interface PasskeySummary {
 export interface RenamePasskeyDto {
   label: string;
 }
-
