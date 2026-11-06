@@ -105,10 +105,44 @@ jobs:
       - name: Compile production application bundle
         run: npm run build
 
+  angular-client:
+    name: Angular Client Test & Build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: angular-client
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: angular-client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Code formatting check (Prettier)
+        run: npx prettier --check "src/**/*.ts" "src/**/*.html" "src/**/*.css"
+
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+
+      - name: Execute Angular unit test suite
+        run: npm test -- --watch=false
+
+      - name: Compile production Angular application bundle
+        run: npm run build
+
   docker:
     name: Docker Container Image Verification
     runs-on: ubuntu-latest
-    needs: [verify]
+    needs: [verify, angular-client]
 
     steps:
       - name: Checkout repository
