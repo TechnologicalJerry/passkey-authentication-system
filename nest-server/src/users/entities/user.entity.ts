@@ -46,7 +46,10 @@ export class User {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 
-  @OneToMany('PasskeyCredential', (credential: PasskeyCredential) => credential.user)
+  @OneToMany(
+    'PasskeyCredential',
+    (credential: PasskeyCredential) => credential.user,
+  )
   credentials!: PasskeyCredential[];
 
   @OneToMany('AuthChallenge', (challenge: AuthChallenge) => challenge.user)
