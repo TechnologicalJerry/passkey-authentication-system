@@ -19,6 +19,7 @@ describe('Configuration & Environment Validation', () => {
       delete process.env.NODE_ENV;
       delete process.env.API_PREFIX;
       delete process.env.API_VERSION;
+      delete process.env.DATABASE_NAME;
       delete process.env.DATABASE_HOST;
       delete process.env.DATABASE_PORT;
       delete process.env.CORS_ORIGINS;
