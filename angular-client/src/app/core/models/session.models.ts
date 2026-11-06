@@ -19,4 +19,3 @@ export interface RotateTokenResult {
     tokenType: 'Bearer';
   };
 }
-
