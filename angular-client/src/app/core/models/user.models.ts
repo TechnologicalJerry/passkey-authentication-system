@@ -33,4 +33,3 @@ export interface PaginatedResult<T> {
   offset: number;
   hasMore: boolean;
 }
-
