@@ -12,4 +12,3 @@ export interface SuccessMessageResponse {
   message: string;
   revokedCount?: number;
 }
-
